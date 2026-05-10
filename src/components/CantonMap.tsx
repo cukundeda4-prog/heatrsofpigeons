@@ -7,187 +7,197 @@ export function CantonMap() {
   const { cantons, selectedCanton, selectCanton, mapMode, toggleMapMode, attack } = useGame();
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [dragging, setDragging] = useState(false);
-  const [start, setStart] = useState({ x: 0, y: 0 });
   const [attackFrom, setAttackFrom] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const gesture = useRef<{ dist: number; zoom: number; pan: { x: number; y: number }; mid: { x: number; y: number } } | null>(null);
+  const dragStart = useRef<{ x: number; y: number; pan: { x: number; y: number } } | null>(null);
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest("[data-canton]")) return;
-    setDragging(true);
-    setStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size === 2) {
+      const pts = [...pointers.current.values()];
+      const dx = pts[0].x - pts[1].x, dy = pts[0].y - pts[1].y;
+      gesture.current = {
+        dist: Math.hypot(dx, dy),
+        zoom,
+        pan,
+        mid: { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 },
+      };
+    } else if (pointers.current.size === 1 && !(e.target as HTMLElement).closest("[data-canton]")) {
+      dragStart.current = { x: e.clientX, y: e.clientY, pan };
+    }
   };
   const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragging) return;
-    setPan({ x: e.clientX - start.x, y: e.clientY - start.y });
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size === 2 && gesture.current) {
+      const pts = [...pointers.current.values()];
+      const dx = pts[0].x - pts[1].x, dy = pts[0].y - pts[1].y;
+      const dist = Math.hypot(dx, dy);
+      const newZoom = Math.max(0.6, Math.min(4, (gesture.current.zoom * dist) / gesture.current.dist));
+      setZoom(newZoom);
+    } else if (pointers.current.size === 1 && dragStart.current) {
+      setPan({ x: dragStart.current.pan.x + e.clientX - dragStart.current.x, y: dragStart.current.pan.y + e.clientY - dragStart.current.y });
+    }
   };
-  const onPointerUp = () => setDragging(false);
+  const onPointerUp = (e: React.PointerEvent) => {
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size < 2) gesture.current = null;
+    if (pointers.current.size === 0) dragStart.current = null;
+  };
 
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      setZoom((z) => Math.max(0.6, Math.min(3, z - e.deltaY * 0.002)));
+      setZoom((z) => Math.max(0.6, Math.min(4, z - e.deltaY * 0.002)));
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
+  const playerIds = CANTONS.filter((c) => cantons[c.id].owner === "player").map((c) => c.id);
+
   return (
     <div
       ref={wrapRef}
-      className="relative w-full h-full overflow-hidden bg-background select-none cursor-grab active:cursor-grabbing"
+      className="relative w-full h-full overflow-hidden bg-background select-none cursor-grab active:cursor-grabbing map-touch"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerLeave={onPointerUp}
+      onPointerCancel={onPointerUp}
       style={{
         backgroundImage:
-          "radial-gradient(ellipse at center, color-mix(in oklab, var(--gold) 5%, transparent), transparent 70%)",
+          "radial-gradient(ellipse at center, color-mix(in oklab, var(--gold) 8%, transparent), transparent 70%)",
       }}
     >
-      {/* Map mode + zoom controls */}
-      <div className="absolute top-4 right-4 z-30 flex flex-col gap-2">
-        <button
-          onClick={toggleMapMode}
-          className="btn-military text-xs px-3 py-2 rounded-md"
-          title="Toggle 2D/3D"
-        >
+      {/* Controls */}
+      <div className="absolute top-3 right-3 z-30 flex flex-col gap-1.5">
+        <button onClick={toggleMapMode} className="btn-military text-[10px] px-2.5 py-1.5 rounded">
           {mapMode === "3d" ? "🛰 3D" : "🗺 2D"}
         </button>
-        <button
-          onClick={() => setZoom((z) => Math.min(3, z + 0.25))}
-          className="btn-military text-xs px-3 py-2 rounded-md"
-        >
-          +
-        </button>
-        <button
-          onClick={() => setZoom((z) => Math.max(0.6, z - 0.25))}
-          className="btn-military text-xs px-3 py-2 rounded-md"
-        >
-          −
-        </button>
-        <button
-          onClick={() => {
-            setZoom(1);
-            setPan({ x: 0, y: 0 });
-          }}
-          className="btn-military text-xs px-3 py-2 rounded-md"
-        >
-          ⊙
-        </button>
+        <button onClick={() => setZoom((z) => Math.min(4, z + 0.25))} className="btn-military text-xs px-2.5 py-1.5 rounded">+</button>
+        <button onClick={() => setZoom((z) => Math.max(0.6, z - 0.25))} className="btn-military text-xs px-2.5 py-1.5 rounded">−</button>
+        <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} className="btn-military text-xs px-2.5 py-1.5 rounded">⊙</button>
       </div>
 
       {attackFrom && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 panel px-4 py-2 rounded-md text-xs">
-          ⚔ Choose an enemy canton to attack from{" "}
-          <span className="text-gold">{CANTONS.find((c) => c.id === attackFrom)?.name}</span>
-          <button onClick={() => setAttackFrom(null)} className="ml-3 text-muted-foreground hover:text-foreground">
-            ✕
-          </button>
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 panel px-3 py-1.5 rounded-md text-[11px] max-w-[90vw] text-center">
+          ⚔ Choose target from <span className="text-gold">{CANTONS.find((c) => c.id === attackFrom)?.name}</span>
+          <button onClick={() => setAttackFrom(null)} className="ml-2 text-muted-foreground hover:text-foreground">✕</button>
         </div>
       )}
 
-      <div
-        className={`absolute inset-0 flex items-center justify-center map-transition ${
-          mapMode === "3d" ? "map-3d" : "map-2d"
-        }`}
-        style={{ transform: undefined }}
-      >
+      <div className={`absolute inset-0 flex items-center justify-center map-transition ${mapMode === "3d" ? "map-3d" : "map-2d"}`}>
         <div
           style={{
             transform: `${mapMode === "3d" ? "perspective(1400px) rotateX(38deg)" : ""} translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            transition: dragging ? "none" : "transform 0.4s ease",
             transformOrigin: "center center",
           }}
         >
-          <svg viewBox="0 0 850 770" className="w-[min(95vw,1100px)] h-auto drop-shadow-2xl">
+          <svg viewBox="0 0 850 770" className="w-[min(96vw,1100px)] h-auto drop-shadow-2xl">
             <defs>
-              <filter id="terrain">
-                <feTurbulence baseFrequency="0.6" numOctaves="2" />
-                <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.08 0" />
-              </filter>
               <radialGradient id="seaGlow" cx="50%" cy="50%">
-                <stop offset="0%" stopColor="oklch(0.3 0.04 230)" stopOpacity="0.5" />
+                <stop offset="0%" stopColor="oklch(0.4 0.05 230)" stopOpacity="0.35" />
                 <stop offset="100%" stopColor="transparent" />
               </radialGradient>
+              <filter id="territoryGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
             </defs>
 
             <rect x="0" y="0" width="850" height="770" fill="url(#seaGlow)" />
 
+            {/* Territory base */}
             {CANTONS.map((c) => {
               const state = cantons[c.id];
+              const isPlayer = state.owner === "player";
               const isSelected = selectedCanton === c.id;
+              return (
+                <path
+                  key={c.id}
+                  data-canton={c.id}
+                  d={c.path}
+                  fill={isPlayer ? `color-mix(in oklab, ${c.color} 75%, var(--gold))` : c.color}
+                  fillOpacity={isPlayer ? 0.95 : 0.85}
+                  stroke="rgba(0,0,0,0.55)"
+                  strokeWidth={0.8}
+                  className={`cursor-pointer transition-all hover:brightness-110 ${isSelected ? "glow-selected" : ""}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (attackFrom && attackFrom !== c.id && !isPlayer) {
+                      attack(attackFrom as any, c.id);
+                      setAttackFrom(null);
+                    } else {
+                      selectCanton(c.id);
+                    }
+                  }}
+                />
+              );
+            })}
+
+            {/* Player expansion outline — drawn above fills */}
+            <g className="pointer-events-none" filter="url(#territoryGlow)">
+              {playerIds.map((id) => {
+                const c = CANTONS.find((x) => x.id === id)!;
+                return (
+                  <path
+                    key={`exp-${id}`}
+                    d={c.path}
+                    fill="none"
+                    stroke="var(--gold)"
+                    strokeWidth={3}
+                    strokeLinejoin="round"
+                    className="expansion-outline"
+                    opacity={0.95}
+                  />
+                );
+              })}
+            </g>
+
+            {/* Selected animated outline */}
+            {selectedCanton && (
+              <path
+                d={CANTONS.find((c) => c.id === selectedCanton)!.path}
+                fill="none"
+                stroke="var(--gold)"
+                strokeWidth={2.5}
+                className="marching-ants pointer-events-none"
+              />
+            )}
+
+            {/* Labels + markers */}
+            {CANTONS.map((c) => {
+              const state = cantons[c.id];
               const isPlayer = state.owner === "player";
               return (
-                <g key={c.id} data-canton={c.id}>
-                  <path
-                    d={c.path}
-                    fill={c.color}
-                    stroke={isPlayer ? "var(--gold)" : "rgba(0,0,0,0.55)"}
-                    strokeWidth={isPlayer ? 3 : 1.2}
-                    className={`cursor-pointer transition-all ${isSelected ? "glow-selected" : ""}`}
-                    style={{ filter: "url(#terrain)" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (attackFrom && attackFrom !== c.id && !isPlayer) {
-                        attack(attackFrom as any, c.id);
-                        setAttackFrom(null);
-                      } else {
-                        selectCanton(c.id);
-                        if (isPlayer && c.id !== attackFrom) {
-                          // long-press / right-click could trigger attack; provide button
-                        }
-                      }
-                    }}
-                  />
-                  {isSelected && (
-                    <path
-                      d={c.path}
-                      fill="none"
-                      stroke="var(--gold)"
-                      strokeWidth={2.5}
-                      className="marching-ants pointer-events-none"
-                    />
-                  )}
-                  <text
-                    x={c.labelX}
-                    y={c.labelY}
-                    textAnchor="middle"
-                    className="pointer-events-none font-display"
-                    fontSize="11"
-                    fill="rgba(0,0,0,0.75)"
-                    style={{ letterSpacing: "0.05em" }}
-                  >
+                <g key={`lbl-${c.id}`} className="pointer-events-none">
+                  <text x={c.labelX} y={c.labelY} textAnchor="middle" fontSize="10" fontWeight="700"
+                    fill="rgba(0,0,0,0.82)" style={{ letterSpacing: "0.05em", fontFamily: "var(--font-display)" }}>
                     {c.name.toUpperCase()}
                   </text>
-                  <text
-                    x={c.labelX}
-                    y={c.labelY + 12}
-                    textAnchor="middle"
-                    className="pointer-events-none"
-                    fontSize="9"
-                    fill="rgba(0,0,0,0.6)"
-                  >
+                  <text x={c.labelX} y={c.labelY + 11} textAnchor="middle" fontSize="8.5" fill="rgba(0,0,0,0.6)">
                     ⚲ {c.capital}
                   </text>
-
-                  {/* Recruit deployment marker */}
                   {state.units > 0 && (
-                    <g transform={`translate(${c.labelX - 18}, ${c.labelY + 18})`} className="pointer-events-none">
-                      <circle r="14" fill="var(--card)" stroke="var(--gold)" strokeWidth="1.5" />
-                      <text textAnchor="middle" y="4" fontSize="10" fill="var(--gold)" fontWeight="700">
+                    <g transform={`translate(${c.labelX - 20}, ${c.labelY + 22})`}>
+                      <circle r="11" fill="var(--card)" stroke="var(--gold)" strokeWidth="1.4" />
+                      <text textAnchor="middle" y="3.5" fontSize="9" fill="var(--gold)" fontWeight="700">
                         {state.units >= 1000 ? `${(state.units / 1000).toFixed(1)}k` : state.units}
                       </text>
                     </g>
                   )}
-
-                  {/* Player flag */}
                   {isPlayer && (
-                    <g transform={`translate(${c.labelX + 26}, ${c.labelY - 30})`} className="pointer-events-none">
-                      <rect x="-1" y="0" width="2" height="22" fill="var(--gold)" />
-                      <polygon points="1,0 18,4 1,8" fill="var(--gold)" />
+                    <g transform={`translate(${c.labelX + 22}, ${c.labelY - 26})`}>
+                      <rect x="-1" y="0" width="1.5" height="18" fill="var(--gold)" />
+                      <polygon points="0.5,0 14,3.5 0.5,7" fill="var(--gold)" />
                     </g>
                   )}
                 </g>
@@ -197,16 +207,13 @@ export function CantonMap() {
         </div>
       </div>
 
-      {/* Player canton recruit-image legend */}
-      <div className="absolute bottom-4 left-4 z-30 panel rounded-md p-2 flex items-center gap-2 text-xs">
-        <img src={recruitImg} alt="" className="h-8 w-8 rounded object-cover" />
-        <div className="text-muted-foreground">Drag map · Scroll to zoom</div>
+      {/* Legend / attack action */}
+      <div className="absolute bottom-3 left-3 z-30 panel rounded-md p-2 flex items-center gap-2 text-[11px] max-w-[calc(100%-1.5rem)]">
+        <img src={recruitImg} alt="" className="h-7 w-7 rounded object-cover shrink-0" />
+        <div className="text-muted-foreground hidden sm:block">Drag · pinch / scroll to zoom</div>
         {selectedCanton && cantons[selectedCanton].owner === "player" && (
-          <button
-            onClick={() => setAttackFrom(selectedCanton)}
-            className="ml-3 btn-military text-[11px] px-3 py-1.5 rounded"
-          >
-            ⚔ Attack from here
+          <button onClick={() => setAttackFrom(selectedCanton)} className="btn-military text-[10px] px-2.5 py-1 rounded ml-auto">
+            ⚔ Attack
           </button>
         )}
       </div>
