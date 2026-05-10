@@ -1,26 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useGame } from "@/game/store";
+import { MainMenu } from "@/components/MainMenu";
+import { SetupScreen } from "@/components/SetupScreen";
+import { GameScreen } from "@/components/GameScreen";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Hearts of Pigeons — Turn-Based Grand Strategy" },
+      {
+        name: "description",
+        content:
+          "Rule a canton of modern-day Bosnia, command your flock and outwit rival pigeon warlords in this turn-based grand strategy game.",
+      },
+      { property: "og:title", content: "Hearts of Pigeons" },
+      { property: "og:description", content: "A turn-based grand strategy of feathers, fervor, and steel." },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. For sites with multiple pages (About, Services, Contact, etc.),
-// create separate route files (about.tsx, services.tsx, contact.tsx) — don't put all pages in this file.
-function PlaceholderIndex() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
-}
-
 function Index() {
-  return <PlaceholderIndex />;
+  const screen = useGame((s) => s.screen);
+  if (screen === "menu") return <MainMenu />;
+  if (screen === "setup") return <SetupScreen />;
+  return <GameScreen />;
 }
