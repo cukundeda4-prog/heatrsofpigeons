@@ -26,106 +26,39 @@ export interface CantonDef {
   labelY: number;
 }
 
-// viewBox: 0 0 850 770 (matches reference map proportions)
-export const CANTONS: CantonDef[] = [
-  {
-    id: "unsko-sanski",
-    name: "Unsko-Sanski",
-    capital: "Bihać",
-    color: "oklch(0.78 0.10 110)",
-    path: "M40,260 L60,180 L120,130 L180,160 L210,220 L260,290 L240,360 L200,420 L160,440 L100,420 L60,360 Z",
-    labelX: 140, labelY: 290,
-  },
-  {
-    id: "republika-srpska",
-    name: "Republika Srpska",
-    capital: "Banja Luka",
-    color: "oklch(0.82 0.08 25)",
-    // Northern arc + eastern wing (drawn as two layered shapes via single path)
-    path: "M180,160 L260,90 L380,70 L500,90 L560,130 L560,170 L520,200 L470,210 L420,200 L380,210 L340,220 L300,230 L260,250 L210,220 Z M560,170 L620,200 L680,260 L740,340 L780,440 L800,540 L770,620 L720,700 L660,720 L620,700 L600,640 L580,560 L560,480 L540,400 L520,320 L520,260 L540,210 Z",
-    labelX: 380, labelY: 130,
-  },
-  {
-    id: "posavski",
-    name: "Posavski",
-    capital: "Orašje",
-    color: "oklch(0.72 0.15 240)",
-    path: "M470,80 L560,70 L600,90 L590,120 L540,130 L490,120 Z",
-    labelX: 530, labelY: 100,
-  },
-  {
-    id: "brcko",
-    name: "Brčko District",
-    capital: "Brčko",
-    color: "oklch(0.88 0.10 150)",
-    path: "M600,90 L640,80 L660,110 L640,140 L605,130 Z",
-    labelX: 630, labelY: 110,
-  },
-  {
-    id: "tuzlanski",
-    name: "Tuzlanski",
-    capital: "Tuzla",
-    color: "oklch(0.90 0.14 95)",
-    path: "M470,210 L560,200 L620,230 L640,290 L620,340 L560,360 L500,350 L460,310 L450,260 Z",
-    labelX: 540, labelY: 290,
-  },
-  {
-    id: "zenicko-dobojski",
-    name: "Zeničko-Dobojski",
-    capital: "Zenica",
-    color: "oklch(0.62 0.04 110)",
-    path: "M340,220 L420,210 L460,260 L470,310 L460,370 L420,420 L380,440 L340,430 L310,400 L300,350 L310,290 Z",
-    labelX: 390, labelY: 320,
-  },
-  {
-    id: "srednjobosanski",
-    name: "Srednjobosanski",
-    capital: "Travnik",
-    color: "oklch(0.78 0.12 200)",
-    path: "M240,360 L310,350 L340,410 L380,450 L370,500 L320,510 L270,490 L240,440 Z",
-    labelX: 305, labelY: 430,
-  },
-  {
-    id: "sarajevo",
-    name: "Kanton Sarajevo",
-    capital: "Sarajevo",
-    color: "oklch(0.78 0.16 140)",
-    path: "M420,440 L470,440 L490,480 L470,520 L430,520 L405,490 Z",
-    labelX: 450, labelY: 485,
-  },
-  {
-    id: "bosansko-podrinjski",
-    name: "Bosansko-Podrinjski",
-    capital: "Goražde",
-    color: "oklch(0.86 0.14 95)",
-    path: "M540,460 L585,455 L600,495 L585,535 L545,535 L530,500 Z",
-    labelX: 565, labelY: 495,
-  },
-  {
-    id: "kanton-10",
-    name: "Kanton 10",
-    capital: "Livno",
-    color: "oklch(0.74 0.13 50)",
-    path: "M100,420 L200,420 L240,440 L270,490 L240,560 L190,610 L130,620 L80,580 L60,500 Z",
-    labelX: 160, labelY: 510,
-  },
-  {
-    id: "zapadnohercegovacki",
-    name: "Zapadnohercegovački",
-    capital: "Široki Brijeg",
-    color: "oklch(0.55 0.05 110)",
-    path: "M130,620 L240,610 L290,650 L280,700 L220,720 L160,705 L120,670 Z",
-    labelX: 210, labelY: 670,
-  },
-  {
-    id: "hercegovacko-neretvanski",
-    name: "Hercegovačko-Neretvanski",
-    capital: "Mostar",
-    color: "oklch(0.85 0.06 110)",
-    path: "M270,490 L320,510 L370,500 L410,530 L430,580 L420,640 L380,690 L320,710 L290,690 L280,640 L290,580 Z",
-    labelX: 350, labelY: 610,
-  },
-];
+import cantonGeo from "./cantons.geo.json";
+
+type GeoEntry = { id: string; name: string; path: string; labelX: number; labelY: number };
+const GEO = cantonGeo as GeoEntry[];
+const geo = (id: string) => GEO.find((g) => g.id === id)!;
+
+const META: Record<CantonId, { name: string; capital: string; color: string }> = {
+  "unsko-sanski": { name: "Unsko-Sanski", capital: "Bihać", color: "oklch(0.78 0.10 110)" },
+  "posavski": { name: "Posavski", capital: "Orašje", color: "oklch(0.72 0.15 240)" },
+  "tuzlanski": { name: "Tuzlanski", capital: "Tuzla", color: "oklch(0.90 0.14 95)" },
+  "zenicko-dobojski": { name: "Zeničko-Dobojski", capital: "Zenica", color: "oklch(0.62 0.06 110)" },
+  "bosansko-podrinjski": { name: "Bosansko-Podrinjski", capital: "Goražde", color: "oklch(0.86 0.14 30)" },
+  "srednjobosanski": { name: "Srednjobosanski", capital: "Travnik", color: "oklch(0.78 0.12 200)" },
+  "hercegovacko-neretvanski": { name: "Hercegovačko-Neretvanski", capital: "Mostar", color: "oklch(0.85 0.08 60)" },
+  "zapadnohercegovacki": { name: "Zapadnohercegovački", capital: "Široki Brijeg", color: "oklch(0.66 0.10 140)" },
+  "sarajevo": { name: "Kanton Sarajevo", capital: "Sarajevo", color: "oklch(0.78 0.16 145)" },
+  "kanton-10": { name: "Kanton 10", capital: "Livno", color: "oklch(0.74 0.13 50)" },
+  "republika-srpska": { name: "Republika Srpska", capital: "Banja Luka", color: "oklch(0.72 0.13 25)" },
+  "brcko": { name: "Brčko District", capital: "Brčko", color: "oklch(0.82 0.12 170)" },
+};
+
+export const CANTONS: CantonDef[] = (Object.keys(META) as CantonId[]).map((id) => {
+  const g = geo(id);
+  return {
+    id,
+    name: META[id].name,
+    capital: META[id].capital,
+    color: META[id].color,
+    path: g.path,
+    labelX: g.labelX,
+    labelY: g.labelY,
+  };
+});
 
 export const PIGEON_TYPES = [
   { id: "rock", name: "Rock Pigeon", trait: "Balanced", bonus: { military: 5, economy: 5 } },
