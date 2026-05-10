@@ -171,6 +171,19 @@
     to { stroke-dashoffset: -20; }
   }
 
+  .player-territory {
+    filter: drop-shadow(0 0 6px var(--gold)) drop-shadow(0 0 14px color-mix(in oklab, var(--gold) 60%, transparent));
+  }
+  .expansion-outline {
+    stroke-dasharray: 4 3;
+    animation: ants 2s linear infinite, expansion-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes expansion-pulse {
+    0%, 100% { opacity: 0.85; stroke-width: 2.5; }
+    50% { opacity: 1; stroke-width: 4; }
+  }
+  .map-touch { touch-action: none; }
+
   .map-3d {
     transform: perspective(1400px) rotateX(38deg);
     transform-origin: center 60%;
