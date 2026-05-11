@@ -407,9 +407,11 @@ export const useGame = create<GameStore>((set, get) => ({
         });
       }
     }
+  },
 
   startGame: () =>
     set((st) => ({
+      ...{ gameOver: null, lastElection: null },
       screen: "game",
       turn: 1,
       cantons: buildInitialCantons(st.setup),
