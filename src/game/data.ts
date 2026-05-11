@@ -47,6 +47,21 @@ const META: Record<CantonId, { name: string; capital: string; color: string }> =
   "brcko": { name: "Brčko District", capital: "Brčko", color: "oklch(0.82 0.12 170)" },
 };
 
+export const PRESIDENTS: Record<CantonId, string> = {
+  "unsko-sanski": "Coo Hadžić",
+  "posavski": "Perica Golubović",
+  "tuzlanski": "Maršal Krilo",
+  "zenicko-dobojski": "Beg Sivi",
+  "bosansko-podrinjski": "Hadži Gugutka",
+  "srednjobosanski": "Pero Travničanin",
+  "hercegovacko-neretvanski": "Don Bijeli Krilić",
+  "zapadnohercegovacki": "Ivan Perjanić",
+  "sarajevo": "Predsjednik OG Bijeli",
+  "kanton-10": "Vojvoda Livnjak",
+  "republika-srpska": "General Sivonja",
+  "brcko": "Gospodar Brčkić",
+};
+
 export const CANTONS: CantonDef[] = (Object.keys(META) as CantonId[]).map((id) => {
   const g = geo(id);
   return {
