@@ -1,5 +1,5 @@
 import { useGame } from "@/game/store";
-import { CANTONS, DIFFICULTIES, IDEOLOGIES, PIGEON_TYPES, RELIGIONS } from "@/game/data";
+import { CANTONS, DIFFICULTIES, IDEOLOGIES, PIGEON_TYPES, RELIGIONS, PLAYER_COLORS } from "@/game/data";
 import { motion } from "framer-motion";
 
 export function SetupScreen() {
