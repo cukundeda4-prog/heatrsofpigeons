@@ -212,6 +212,46 @@ export const useGame = create<GameStore>((set, get) => ({
       if (c.treasury < cost) return st;
       return { cantons: { ...st.cantons, [cantonId]: { ...c, treasury: c.treasury - cost, nukes: c.nukes + 1 } } };
     }),
+  buyMedicine: (cantonId) =>
+    set((st) => {
+      const c = st.cantons[cantonId];
+      const cost = 3000;
+      if (c.treasury < cost) return st;
+      return {
+        cantons: {
+          ...st.cantons,
+          [cantonId]: {
+            ...c,
+            treasury: c.treasury - cost,
+            health: Math.min(100, c.health + 15),
+          },
+        },
+      };
+    }),
+  buyFood: (cantonId) =>
+    set((st) => {
+      const c = st.cantons[cantonId];
+      const cost = 2500;
+      if (c.treasury < cost) return st;
+      return {
+        cantons: {
+          ...st.cantons,
+          [cantonId]: {
+            ...c,
+            treasury: c.treasury - cost,
+            hunger: Math.min(100, c.hunger + 20),
+            loyalty: Math.min(100, c.loyalty + 3),
+          },
+        },
+      };
+    }),
+  setOpstinaMilitary: (cantonId, index, value) =>
+    set((st) => {
+      const c = st.cantons[cantonId];
+      const opstinas = c.opstinas.map((o, i) => (i === index ? { ...o, military: Math.max(0, Math.floor(value)) } : o));
+      const total = opstinas.reduce((s, o) => s + o.military, 0);
+      return { cantons: { ...st.cantons, [cantonId]: { ...c, opstinas, military: total } } };
+    }),
   assignGeneral: (cantonId, name) =>
     set((st) => ({ cantons: { ...st.cantons, [cantonId]: { ...st.cantons[cantonId], general: name } } })),
 
