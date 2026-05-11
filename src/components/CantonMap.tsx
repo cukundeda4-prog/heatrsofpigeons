@@ -70,6 +70,13 @@ export function CantonMap() {
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onClick={(e) => {
+        // Click on empty background deselects (canton paths stopPropagation)
+        if (!(e.target as HTMLElement).closest("[data-canton]")) {
+          if (attackFrom) setAttackFrom(null);
+          else selectCanton(null);
+        }
+      }}
       style={{
         backgroundImage:
           "radial-gradient(ellipse at center, color-mix(in oklab, var(--gold) 8%, transparent), transparent 70%)",
