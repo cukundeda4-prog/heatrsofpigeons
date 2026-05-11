@@ -112,7 +112,14 @@ function buildInitialCantons(setup: PlayerSetup): Record<CantonId, CantonState> 
       planes: 0,
       artillery: 0,
       nukes: 0,
+      opstinas: (OPSTINAS[c.id] ?? []).map((name) => ({ name, military: 0 })),
     };
+    // Distribute military across opstinas
+    const op = result[c.id].opstinas;
+    if (op.length) {
+      const per = Math.floor(result[c.id].military / op.length);
+      op.forEach((o) => (o.military = per));
+    }
   }
   return result;
 }
@@ -125,6 +132,7 @@ const initialSetup: PlayerSetup = {
   religion: "Pigeonism",
   theme: "dark",
   leaderName: "Generalisimo Pero",
+  playerColor: "oklch(0.68 0.18 145)",
 };
 
 export const useGame = create<GameStore>((set, get) => ({
