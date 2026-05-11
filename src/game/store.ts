@@ -74,6 +74,9 @@ interface GameStore {
   buyPlanes: (cantonId: CantonId, count: number) => void;
   buyArtillery: (cantonId: CantonId, count: number) => void;
   buyNuke: (cantonId: CantonId) => void;
+  buyMedicine: (cantonId: CantonId) => void;
+  buyFood: (cantonId: CantonId) => void;
+  setOpstinaMilitary: (cantonId: CantonId, index: number, value: number) => void;
   assignGeneral: (cantonId: CantonId, name: string) => void;
 
   attack: (from: CantonId, to: CantonId) => void;
