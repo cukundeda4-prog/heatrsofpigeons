@@ -155,6 +155,11 @@ export const useGame = create<GameStore>((set, get) => ({
   selectedCanton: null,
   selectCanton: (id) => set({ selectedCanton: id }),
 
+  gameOver: null,
+  lastElection: null,
+  dismissElection: () => set({ lastElection: null }),
+
+
   news: [],
   unreadNews: [],
   pushNews: (title, body) =>
