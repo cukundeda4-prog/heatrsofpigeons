@@ -60,6 +60,10 @@ interface GameStore {
   selectedCanton: CantonId | null;
   selectCanton: (id: CantonId | null) => void;
 
+  gameOver: null | { won: boolean; reason: string; approval: number };
+  lastElection: null | { turn: number; approval: number; opponent: number; won: boolean };
+  dismissElection: () => void;
+
   news: NewsItem[];
   unreadNews: NewsItem[];
   pushNews: (title: string, body: string) => void;
@@ -150,6 +154,11 @@ export const useGame = create<GameStore>((set, get) => ({
   cantons: buildInitialCantons(initialSetup),
   selectedCanton: null,
   selectCanton: (id) => set({ selectedCanton: id }),
+
+  gameOver: null,
+  lastElection: null,
+  dismissElection: () => set({ lastElection: null }),
+
 
   news: [],
   unreadNews: [],
@@ -358,8 +367,46 @@ export const useGame = create<GameStore>((set, get) => ({
       }
     }
 
-    set({ cantons: next, turn: st.turn + 1 });
+    const nextTurn = st.turn + 1;
+    set({ cantons: next, turn: nextTurn });
     newsBatch.forEach((n) => get().pushNews(n.title, n.body));
+
+    // Presidential election every 12 turns (1 year)
+    if (nextTurn % 12 === 1 && nextTurn > 1) {
+      const playerCantons = Object.values(next).filter((c) => c.owner === "player");
+      if (playerCantons.length === 0) {
+        set({ gameOver: { won: false, reason: "Your realm has fallen. No territories remain.", approval: 0 } });
+        return;
+      }
+      const avg = (key: "loyalty" | "hunger" | "health") =>
+        playerCantons.reduce((s, c) => s + c[key], 0) / playerCantons.length;
+      const loyalty = avg("loyalty");
+      const hunger = avg("hunger");
+      const health = avg("health");
+      const expansionBonus = Math.min(20, (playerCantons.length - 1) * 3);
+      const approval = Math.round(loyalty * 0.5 + hunger * 0.25 + health * 0.25 + expansionBonus);
+      const opponent = rand(40, 70);
+      const won = approval >= opponent;
+      set({ lastElection: { turn: nextTurn, approval, opponent, won } });
+      if (won) {
+        get().pushNews(
+          "🗳 RE-ELECTED!",
+          `Year ${Math.floor(nextTurn / 12)} elections — you won ${approval}% vs ${opponent}%. Long may you coo.`,
+        );
+      } else {
+        get().pushNews(
+          "🗳 ELECTION LOST",
+          `The flock has voted you out. Approval ${approval}% vs opponent ${opponent}%.`,
+        );
+        set({
+          gameOver: {
+            won: false,
+            reason: `You lost the year-${Math.floor(nextTurn / 12)} elections. The pigeons demanded change — ${approval}% approval was not enough against your rival's ${opponent}%.`,
+            approval,
+          },
+        });
+      }
+    }
   },
 
   startGame: () =>
@@ -370,6 +417,8 @@ export const useGame = create<GameStore>((set, get) => ({
       selectedCanton: st.setup.startingCanton,
       news: [],
       unreadNews: [],
+      gameOver: null,
+      lastElection: null,
     })),
 
   resetGame: () =>
@@ -381,5 +430,7 @@ export const useGame = create<GameStore>((set, get) => ({
       selectedCanton: null,
       news: [],
       unreadNews: [],
+      gameOver: null,
+      lastElection: null,
     }),
 }));
