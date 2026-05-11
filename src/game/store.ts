@@ -1,5 +1,11 @@
 import { create } from "zustand";
-import { CANTONS, CantonId, Difficulty, PIGEON_TYPES, NEWS_TEMPLATES } from "./data";
+import { CANTONS, CantonId, Difficulty, PIGEON_TYPES, NEWS_TEMPLATES, OPSTINAS } from "./data";
+
+export interface Opstina {
+  name: string;
+  military: number;
+}
+
 
 export interface CantonState {
   id: CantonId;
