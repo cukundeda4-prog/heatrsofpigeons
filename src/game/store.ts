@@ -60,6 +60,10 @@ interface GameStore {
   selectedCanton: CantonId | null;
   selectCanton: (id: CantonId | null) => void;
 
+  gameOver: null | { won: boolean; reason: string; approval: number };
+  lastElection: null | { turn: number; approval: number; opponent: number; won: boolean };
+  dismissElection: () => void;
+
   news: NewsItem[];
   unreadNews: NewsItem[];
   pushNews: (title: string, body: string) => void;
