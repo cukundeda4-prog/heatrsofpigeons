@@ -265,14 +265,27 @@ export const useGame = create<GameStore>((set, get) => ({
     const dPower = d.military + d.tanks * 50 + d.planes * 120 + d.artillery * 40;
     const win = aPower * (0.8 + Math.random() * 0.4) > dPower;
     if (win) {
+      const newMil = Math.max(100, Math.floor(d.military * 0.3));
+      const opCount = d.opstinas.length || 1;
+      const per = Math.floor(newMil / opCount);
+      const newOpstinas = d.opstinas.map((o) => ({ ...o, military: per }));
       set({
         cantons: {
           ...st.cantons,
-          [to]: { ...d, owner: "player", loyalty: 35, military: Math.max(100, Math.floor(d.military * 0.3)) },
+          [to]: {
+            ...d,
+            owner: "player",
+            loyalty: 35,
+            military: newMil,
+            opstinas: newOpstinas,
+            pigeonType: st.setup.pigeonType,
+            ideology: st.setup.ideology,
+            religion: st.setup.religion,
+          },
           [from]: { ...a, military: Math.max(50, Math.floor(a.military * 0.7)), units: Math.max(0, a.units - 200) },
         },
       });
-      get().pushNews("Victory!", NEWS_TEMPLATES.warWon(d.id));
+      get().pushNews("Victory!", `⚔️ Glorious victory! ${CANTONS.find(x=>x.id===to)!.name} now flies your banner.`);
     } else {
       set({
         cantons: {
