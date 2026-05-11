@@ -31,6 +31,23 @@ export function StatsPanel() {
         />
       </header>
 
+      <div className="flex items-center gap-3 panel rounded-md p-2">
+        <img
+          src={presidentImg}
+          alt={PRESIDENTS[def.id]}
+          loading="lazy"
+          width={512}
+          height={512}
+          className="h-14 w-14 rounded-md object-cover border-2 shrink-0"
+          style={{ borderColor: def.color, filter: `hue-rotate(${(def.id.charCodeAt(0) * 7) % 360}deg) saturate(1.1)` }}
+        />
+        <div className="min-w-0">
+          <div className="text-[9px] tracking-widest text-gold/70">{isPlayer ? "YOUR PRESIDENT" : "RULING PRESIDENT"}</div>
+          <div className="font-display text-sm text-foreground truncate">{PRESIDENTS[def.id]}</div>
+          <div className="text-[10px] text-muted-foreground">of {def.name}</div>
+        </div>
+      </div>
+
       <div className="flex flex-wrap gap-1.5 text-[10px]">
         <Tag>{pigeonName(s.pigeonType)}</Tag>
         <Tag>{s.ideology}</Tag>
