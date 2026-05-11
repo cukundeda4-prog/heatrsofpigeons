@@ -4,7 +4,8 @@ import recruitImg from "@/assets/recruit.png";
 import { useState, useRef, useEffect } from "react";
 
 export function CantonMap() {
-  const { cantons, selectedCanton, selectCanton, mapMode, toggleMapMode, attack } = useGame();
+  const { cantons, selectedCanton, selectCanton, mapMode, toggleMapMode, attack, setup } = useGame();
+  const playerColor = setup.playerColor;
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [attackFrom, setAttackFrom] = useState<string | null>(null);
@@ -69,6 +70,13 @@ export function CantonMap() {
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
+      onClick={(e) => {
+        // Click on empty background deselects (canton paths stopPropagation)
+        if (!(e.target as HTMLElement).closest("[data-canton]")) {
+          if (attackFrom) setAttackFrom(null);
+          else selectCanton(null);
+        }
+      }}
       style={{
         backgroundImage:
           "radial-gradient(ellipse at center, color-mix(in oklab, var(--gold) 8%, transparent), transparent 70%)",
@@ -125,8 +133,8 @@ export function CantonMap() {
                   key={c.id}
                   data-canton={c.id}
                   d={c.path}
-                  fill={isPlayer ? `color-mix(in oklab, ${c.color} 75%, var(--gold))` : c.color}
-                  fillOpacity={isPlayer ? 0.95 : 0.85}
+                  fill={isPlayer ? playerColor : c.color}
+                  fillOpacity={isPlayer ? 0.92 : 0.85}
                   stroke="rgba(0,0,0,0.55)"
                   strokeWidth={0.8}
                   className={`cursor-pointer transition-all hover:brightness-110 ${isSelected ? "glow-selected" : ""}`}

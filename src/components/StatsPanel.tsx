@@ -3,7 +3,7 @@ import { CANTONS } from "@/game/data";
 import { pigeonName } from "./CantonMap";
 
 export function StatsPanel() {
-  const { selectedCanton, cantons, recruit, buyTanks, buyPlanes, buyArtillery, buyNuke } = useGame();
+  const { selectedCanton, cantons, recruit, buyTanks, buyPlanes, buyArtillery, buyNuke, buyMedicine, buyFood, setOpstinaMilitary } = useGame();
   if (!selectedCanton) {
     return (
       <aside className="panel rounded-lg p-4 text-sm text-muted-foreground">
@@ -61,6 +61,37 @@ export function StatsPanel() {
             <ActionBtn onClick={() => buyPlanes(s.id, 1)}>✈ Plane · 8k¢</ActionBtn>
             <ActionBtn onClick={() => buyNuke(s.id)}>☢ Nuke · 50k¢</ActionBtn>
           </div>
+
+          <div className="text-[10px] tracking-widest text-gold/70 pt-1">WELFARE</div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <ActionBtn onClick={() => buyFood(s.id)}>🍞 Food +20 · 2.5k¢</ActionBtn>
+            <ActionBtn onClick={() => buyMedicine(s.id)}>💊 Medicine +15 · 3k¢</ActionBtn>
+          </div>
+
+          {s.opstinas.length > 0 && (
+            <>
+              <div className="text-[10px] tracking-widest text-gold/70 pt-1">OPĆINE — DEPLOY ARMY</div>
+              <div className="space-y-1.5">
+                {s.opstinas.map((o, i) => (
+                  <div key={o.name} className="panel rounded p-1.5">
+                    <div className="flex justify-between text-[11px] mb-1">
+                      <span className="text-foreground">⚲ {o.name}</span>
+                      <span className="font-mono text-gold">{o.military.toLocaleString()}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={Math.max(1000, s.military + o.military)}
+                      step={50}
+                      value={o.military}
+                      onChange={(e) => setOpstinaMilitary(s.id, i, Number(e.target.value))}
+                      className="w-full accent-[var(--gold)]"
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
     </aside>

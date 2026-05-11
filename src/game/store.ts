@@ -1,5 +1,11 @@
 import { create } from "zustand";
-import { CANTONS, CantonId, Difficulty, PIGEON_TYPES, NEWS_TEMPLATES } from "./data";
+import { CANTONS, CantonId, Difficulty, PIGEON_TYPES, NEWS_TEMPLATES, OPSTINAS } from "./data";
+
+export interface Opstina {
+  name: string;
+  military: number;
+}
+
 
 export interface CantonState {
   id: CantonId;
@@ -19,6 +25,7 @@ export interface CantonState {
   artillery: number;
   nukes: number;
   general?: string;
+  opstinas: Opstina[];
 }
 
 export interface NewsItem {
@@ -36,6 +43,7 @@ export interface PlayerSetup {
   religion: string;
   theme: "dark" | "light";
   leaderName: string;
+  playerColor: string;
 }
 
 export type Screen = "menu" | "setup" | "game";
@@ -66,6 +74,9 @@ interface GameStore {
   buyPlanes: (cantonId: CantonId, count: number) => void;
   buyArtillery: (cantonId: CantonId, count: number) => void;
   buyNuke: (cantonId: CantonId) => void;
+  buyMedicine: (cantonId: CantonId) => void;
+  buyFood: (cantonId: CantonId) => void;
+  setOpstinaMilitary: (cantonId: CantonId, index: number, value: number) => void;
   assignGeneral: (cantonId: CantonId, name: string) => void;
 
   attack: (from: CantonId, to: CantonId) => void;
@@ -105,7 +116,14 @@ function buildInitialCantons(setup: PlayerSetup): Record<CantonId, CantonState> 
       planes: 0,
       artillery: 0,
       nukes: 0,
+      opstinas: (OPSTINAS[c.id] ?? []).map((name) => ({ name, military: 0 })),
     };
+    // Distribute military across opstinas
+    const op = result[c.id].opstinas;
+    if (op.length) {
+      const per = Math.floor(result[c.id].military / op.length);
+      op.forEach((o) => (o.military = per));
+    }
   }
   return result;
 }
@@ -118,6 +136,7 @@ const initialSetup: PlayerSetup = {
   religion: "Pigeonism",
   theme: "dark",
   leaderName: "Generalisimo Pero",
+  playerColor: "oklch(0.68 0.18 145)",
 };
 
 export const useGame = create<GameStore>((set, get) => ({
@@ -193,6 +212,46 @@ export const useGame = create<GameStore>((set, get) => ({
       if (c.treasury < cost) return st;
       return { cantons: { ...st.cantons, [cantonId]: { ...c, treasury: c.treasury - cost, nukes: c.nukes + 1 } } };
     }),
+  buyMedicine: (cantonId) =>
+    set((st) => {
+      const c = st.cantons[cantonId];
+      const cost = 3000;
+      if (c.treasury < cost) return st;
+      return {
+        cantons: {
+          ...st.cantons,
+          [cantonId]: {
+            ...c,
+            treasury: c.treasury - cost,
+            health: Math.min(100, c.health + 15),
+          },
+        },
+      };
+    }),
+  buyFood: (cantonId) =>
+    set((st) => {
+      const c = st.cantons[cantonId];
+      const cost = 2500;
+      if (c.treasury < cost) return st;
+      return {
+        cantons: {
+          ...st.cantons,
+          [cantonId]: {
+            ...c,
+            treasury: c.treasury - cost,
+            hunger: Math.min(100, c.hunger + 20),
+            loyalty: Math.min(100, c.loyalty + 3),
+          },
+        },
+      };
+    }),
+  setOpstinaMilitary: (cantonId, index, value) =>
+    set((st) => {
+      const c = st.cantons[cantonId];
+      const opstinas = c.opstinas.map((o, i) => (i === index ? { ...o, military: Math.max(0, Math.floor(value)) } : o));
+      const total = opstinas.reduce((s, o) => s + o.military, 0);
+      return { cantons: { ...st.cantons, [cantonId]: { ...c, opstinas, military: total } } };
+    }),
   assignGeneral: (cantonId, name) =>
     set((st) => ({ cantons: { ...st.cantons, [cantonId]: { ...st.cantons[cantonId], general: name } } })),
 
@@ -206,14 +265,27 @@ export const useGame = create<GameStore>((set, get) => ({
     const dPower = d.military + d.tanks * 50 + d.planes * 120 + d.artillery * 40;
     const win = aPower * (0.8 + Math.random() * 0.4) > dPower;
     if (win) {
+      const newMil = Math.max(100, Math.floor(d.military * 0.3));
+      const opCount = d.opstinas.length || 1;
+      const per = Math.floor(newMil / opCount);
+      const newOpstinas = d.opstinas.map((o) => ({ ...o, military: per }));
       set({
         cantons: {
           ...st.cantons,
-          [to]: { ...d, owner: "player", loyalty: 35, military: Math.max(100, Math.floor(d.military * 0.3)) },
+          [to]: {
+            ...d,
+            owner: "player",
+            loyalty: 35,
+            military: newMil,
+            opstinas: newOpstinas,
+            pigeonType: st.setup.pigeonType,
+            ideology: st.setup.ideology,
+            religion: st.setup.religion,
+          },
           [from]: { ...a, military: Math.max(50, Math.floor(a.military * 0.7)), units: Math.max(0, a.units - 200) },
         },
       });
-      get().pushNews("Victory!", NEWS_TEMPLATES.warWon(d.id));
+      get().pushNews("Victory!", `⚔️ Glorious victory! ${CANTONS.find(x=>x.id===to)!.name} now flies your banner.`);
     } else {
       set({
         cantons: {
