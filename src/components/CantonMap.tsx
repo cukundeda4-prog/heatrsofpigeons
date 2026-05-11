@@ -4,7 +4,8 @@ import recruitImg from "@/assets/recruit.png";
 import { useState, useRef, useEffect } from "react";
 
 export function CantonMap() {
-  const { cantons, selectedCanton, selectCanton, mapMode, toggleMapMode, attack } = useGame();
+  const { cantons, selectedCanton, selectCanton, mapMode, toggleMapMode, attack, setup } = useGame();
+  const playerColor = setup.playerColor;
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [attackFrom, setAttackFrom] = useState<string | null>(null);
