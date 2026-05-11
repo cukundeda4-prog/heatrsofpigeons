@@ -25,6 +25,7 @@ export function GameScreen() {
         <div className="font-display text-gold tracking-widest text-sm md:text-base shrink-0">🕊 HEARTS OF PIGEONS</div>
         <div className="hidden md:flex gap-4 text-muted-foreground">
           <Stat label="Turn" value={`${turn}`} />
+          <Stat label="Year" value={`${Math.floor((turn - 1) / 12) + 1} · Election in ${12 - ((turn - 1) % 12)}t`} />
           <Stat label="Cantons" value={`${playerCantons.length}/12`} />
           <Stat label="Treasury" value={`${totalTreasury.toLocaleString()}¢`} />
           <Stat label="Military" value={totalMilitary.toLocaleString()} />
