@@ -25,6 +25,7 @@ export interface CantonState {
   artillery: number;
   nukes: number;
   general?: string;
+  opstinas: Opstina[];
 }
 
 export interface NewsItem {
