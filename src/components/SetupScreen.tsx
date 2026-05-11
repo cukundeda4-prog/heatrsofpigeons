@@ -101,6 +101,26 @@ export function SetupScreen() {
           </div>
         </Field>
 
+        {/* Faction Color */}
+        <Field label="Faction Color">
+          <div className="flex gap-2 flex-wrap">
+            {PLAYER_COLORS.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setSetup({ playerColor: c.value })}
+                className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-full border transition ${
+                  setup.playerColor === c.value
+                    ? "border-gold bg-gold/10 text-foreground"
+                    : "border-border text-muted-foreground hover:border-gold/60"
+                }`}
+              >
+                <span className="h-3 w-3 rounded-full" style={{ background: c.value }} />
+                {c.name}
+              </button>
+            ))}
+          </div>
+        </Field>
+
         {/* Theme */}
         <Field label="Theme">
           <div className="flex gap-2">
