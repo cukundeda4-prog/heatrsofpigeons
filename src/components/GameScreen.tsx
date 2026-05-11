@@ -3,6 +3,7 @@ import { CantonMap } from "./CantonMap";
 import { StatsPanel } from "./StatsPanel";
 import { GeneralPanel } from "./GeneralPanel";
 import { NewsModal } from "./NewsModal";
+import { ElectionModal } from "./ElectionModal";
 import { useEffect } from "react";
 
 export function GameScreen() {
