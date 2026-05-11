@@ -43,6 +43,7 @@ export interface PlayerSetup {
   religion: string;
   theme: "dark" | "light";
   leaderName: string;
+  playerColor: string;
 }
 
 export type Screen = "menu" | "setup" | "game";
