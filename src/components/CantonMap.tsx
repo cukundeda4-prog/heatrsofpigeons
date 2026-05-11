@@ -126,8 +126,8 @@ export function CantonMap() {
                   key={c.id}
                   data-canton={c.id}
                   d={c.path}
-                  fill={isPlayer ? `color-mix(in oklab, ${c.color} 75%, var(--gold))` : c.color}
-                  fillOpacity={isPlayer ? 0.95 : 0.85}
+                  fill={isPlayer ? playerColor : c.color}
+                  fillOpacity={isPlayer ? 0.92 : 0.85}
                   stroke="rgba(0,0,0,0.55)"
                   strokeWidth={0.8}
                   className={`cursor-pointer transition-all hover:brightness-110 ${isSelected ? "glow-selected" : ""}`}
