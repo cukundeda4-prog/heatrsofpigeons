@@ -1,5 +1,6 @@
 import { useGame } from "@/game/store";
-import { CANTONS } from "@/game/data";
+import { CANTONS, PRESIDENTS } from "@/game/data";
+import presidentImg from "@/assets/president.jpg";
 import { pigeonName } from "./CantonMap";
 
 export function StatsPanel() {
