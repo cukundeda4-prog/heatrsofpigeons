@@ -90,6 +90,7 @@ export function GameScreen() {
       </footer>
 
       <NewsModal />
+      <ElectionModal />
     </div>
   );
 }
