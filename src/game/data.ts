@@ -60,6 +60,30 @@ export const CANTONS: CantonDef[] = (Object.keys(META) as CantonId[]).map((id) =
   };
 });
 
+export const OPSTINAS: Record<CantonId, string[]> = {
+  "unsko-sanski": ["Bihać", "Cazin", "Sanski Most", "Velika Kladuša"],
+  "posavski": ["Orašje", "Odžak", "Domaljevac"],
+  "tuzlanski": ["Tuzla", "Lukavac", "Živinice", "Gračanica", "Srebrenik"],
+  "zenicko-dobojski": ["Zenica", "Tešanj", "Visoko", "Kakanj"],
+  "bosansko-podrinjski": ["Goražde", "Foča-Ustikolina", "Pale-Prača"],
+  "srednjobosanski": ["Travnik", "Vitez", "Bugojno", "Jajce"],
+  "hercegovacko-neretvanski": ["Mostar", "Konjic", "Jablanica", "Čapljina"],
+  "zapadnohercegovacki": ["Široki Brijeg", "Ljubuški", "Posušje", "Grude"],
+  "sarajevo": ["Stari Grad", "Centar", "Novo Sarajevo", "Novi Grad", "Ilidža"],
+  "kanton-10": ["Livno", "Tomislavgrad", "Kupres", "Glamoč"],
+  "republika-srpska": ["Banja Luka", "Bijeljina", "Prijedor", "Doboj", "Trebinje", "Pale"],
+  "brcko": ["Brčko", "Brezovo Polje", "Ravne-Brčko"],
+};
+
+export const PLAYER_COLORS = [
+  { id: "green", name: "Forest", value: "oklch(0.68 0.18 145)" },
+  { id: "blue", name: "Royal Blue", value: "oklch(0.62 0.20 255)" },
+  { id: "red", name: "Crimson", value: "oklch(0.62 0.22 25)" },
+  { id: "purple", name: "Imperial", value: "oklch(0.58 0.20 305)" },
+  { id: "gold", name: "Gold", value: "oklch(0.78 0.16 80)" },
+  { id: "cyan", name: "Sky", value: "oklch(0.72 0.14 210)" },
+];
+
 export const PIGEON_TYPES = [
   { id: "rock", name: "Rock Pigeon", trait: "Balanced", bonus: { military: 5, economy: 5 } },
   { id: "fantail", name: "Fantail", trait: "Charismatic", bonus: { loyalty: 15 } },
