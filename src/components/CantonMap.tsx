@@ -61,6 +61,7 @@ export function CantonMap() {
   }, []);
 
   const playerIds = CANTONS.filter((c) => cantons[c.id].owner === "player").map((c) => c.id);
+  const puppetIds = CANTONS.filter((c) => cantons[c.id].owner === "puppet-of-player").map((c) => c.id);
 
   return (
     <div
