@@ -158,16 +158,15 @@ export function CantonMap() {
               {playerIds.map((id) => {
                 const c = CANTONS.find((x) => x.id === id)!;
                 return (
-                  <path
-                    key={`exp-${id}`}
-                    d={c.path}
-                    fill="none"
-                    stroke="var(--gold)"
-                    strokeWidth={3}
-                    strokeLinejoin="round"
-                    className="expansion-outline"
-                    opacity={0.95}
-                  />
+                  <path key={`exp-${id}`} d={c.path} fill="none" stroke="var(--gold)" strokeWidth={3}
+                    strokeLinejoin="round" className="expansion-outline" opacity={0.95} />
+                );
+              })}
+              {puppetIds.map((id) => {
+                const c = CANTONS.find((x) => x.id === id)!;
+                return (
+                  <path key={`pup-${id}`} d={c.path} fill="none" stroke={playerColor} strokeWidth={2.5}
+                    strokeDasharray="6 4" strokeLinejoin="round" opacity={0.9} />
                 );
               })}
             </g>
