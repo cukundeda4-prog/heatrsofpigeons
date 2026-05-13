@@ -217,8 +217,6 @@ export const useGame = create<GameStore>((set, get) => ({
       pendingConquest: null,
     });
     get().pushNews("⚑ Annexed", `${CANTONS.find((x) => x.id === to)!.name} has been annexed into your realm.`);
-    // check victory
-    get().checkVictory?.();
     const all = Object.values(get().cantons);
     if (all.every((c) => isPlayerSide(c.owner))) {
       set({ gameOver: { won: true, reason: "All of Bosnia flies your banner. Total dominion achieved." } });
