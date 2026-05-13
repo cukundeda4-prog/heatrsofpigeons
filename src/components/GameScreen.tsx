@@ -20,6 +20,7 @@ export function GameScreen() {
   }, [setup.theme]);
 
   const playerCantons = Object.values(cantons).filter((c) => c.owner === "player");
+  const puppetCantons = Object.values(cantons).filter((c) => c.owner === "puppet-of-player");
   const totalTreasury = playerCantons.reduce((s, c) => s + c.treasury, 0);
   const totalMilitary = playerCantons.reduce((s, c) => s + c.military, 0);
 
