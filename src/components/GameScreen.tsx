@@ -41,12 +41,11 @@ export function GameScreen() {
             ⏭ End Turn
           </button>
           <button
-            onClick={() => {
-              if (confirm("Return to main menu? Progress lost.")) resetGame();
-            }}
+            onClick={() => setMenuOpen(true)}
             className="btn-military text-xs px-3 py-2 rounded"
+            title="Menu / Save / Load / Settings"
           >
-            ⏏
+            ☰
           </button>
         </div>
       </header>
