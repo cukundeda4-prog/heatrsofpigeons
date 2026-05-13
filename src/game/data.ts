@@ -124,8 +124,32 @@ export const RELIGIONS = [
   "Atheist Flock", "Old Feathers", "Loft of the Sun",
 ];
 
-export const DIFFICULTIES = ["Easy", "Normal", "Hard", "Pigeon Chaos"] as const;
+export const DIFFICULTIES = ["Easy", "Normal", "Hard", "Veteran", "Pigeon Chaos", "Apocalypse"] as const;
 export type Difficulty = typeof DIFFICULTIES[number];
+
+export const DIFFICULTY_MULT: Record<Difficulty, { aiPower: number; aiAggression: number; income: number }> = {
+  "Easy":          { aiPower: 0.7, aiAggression: 0.05, income: 1.25 },
+  "Normal":        { aiPower: 1.0, aiAggression: 0.12, income: 1.0 },
+  "Hard":          { aiPower: 1.3, aiAggression: 0.20, income: 0.85 },
+  "Veteran":       { aiPower: 1.6, aiAggression: 0.28, income: 0.7 },
+  "Pigeon Chaos":  { aiPower: 2.0, aiAggression: 0.38, income: 0.55 },
+  "Apocalypse":    { aiPower: 2.8, aiAggression: 0.55, income: 0.4 },
+};
+
+export const NEIGHBORS: Record<CantonId, CantonId[]> = {
+  "unsko-sanski": ["republika-srpska", "kanton-10"],
+  "posavski": ["tuzlanski", "republika-srpska", "brcko"],
+  "tuzlanski": ["posavski", "zenicko-dobojski", "republika-srpska", "brcko"],
+  "zenicko-dobojski": ["tuzlanski", "srednjobosanski", "sarajevo", "republika-srpska"],
+  "bosansko-podrinjski": ["sarajevo", "republika-srpska"],
+  "srednjobosanski": ["zenicko-dobojski", "sarajevo", "hercegovacko-neretvanski", "kanton-10", "republika-srpska"],
+  "hercegovacko-neretvanski": ["srednjobosanski", "sarajevo", "zapadnohercegovacki", "republika-srpska", "bosansko-podrinjski"],
+  "zapadnohercegovacki": ["hercegovacko-neretvanski", "kanton-10"],
+  "sarajevo": ["zenicko-dobojski", "srednjobosanski", "hercegovacko-neretvanski", "bosansko-podrinjski", "republika-srpska"],
+  "kanton-10": ["unsko-sanski", "srednjobosanski", "zapadnohercegovacki", "republika-srpska"],
+  "republika-srpska": ["unsko-sanski", "posavski", "tuzlanski", "zenicko-dobojski", "bosansko-podrinjski", "srednjobosanski", "hercegovacko-neretvanski", "sarajevo", "kanton-10", "brcko"],
+  "brcko": ["posavski", "tuzlanski", "republika-srpska"],
+};
 
 export const NEWS_TEMPLATES = {
   hantavirus: (c: string) => `🦠 HantaVirus outbreak ravages ${c}! Starving pigeons collapse in the streets.`,
