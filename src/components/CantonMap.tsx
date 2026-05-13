@@ -61,6 +61,7 @@ export function CantonMap() {
   }, []);
 
   const playerIds = CANTONS.filter((c) => cantons[c.id].owner === "player").map((c) => c.id);
+  const puppetIds = CANTONS.filter((c) => cantons[c.id].owner === "puppet-of-player").map((c) => c.id);
 
   return (
     <div
@@ -127,6 +128,7 @@ export function CantonMap() {
             {CANTONS.map((c) => {
               const state = cantons[c.id];
               const isPlayer = state.owner === "player";
+              const isPuppet = state.owner === "puppet-of-player";
               const isSelected = selectedCanton === c.id;
               return (
                 <path
@@ -134,13 +136,13 @@ export function CantonMap() {
                   data-canton={c.id}
                   d={c.path}
                   fill={isPlayer ? playerColor : c.color}
-                  fillOpacity={isPlayer ? 0.92 : 0.85}
+                  fillOpacity={isPlayer ? 0.92 : isPuppet ? 0.78 : 0.85}
                   stroke="rgba(0,0,0,0.55)"
                   strokeWidth={0.8}
                   className={`cursor-pointer transition-all hover:brightness-110 ${isSelected ? "glow-selected" : ""}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (attackFrom && attackFrom !== c.id && !isPlayer) {
+                    if (attackFrom && attackFrom !== c.id && !isPlayer && !isPuppet) {
                       attack(attackFrom as any, c.id);
                       setAttackFrom(null);
                     } else {
@@ -156,16 +158,15 @@ export function CantonMap() {
               {playerIds.map((id) => {
                 const c = CANTONS.find((x) => x.id === id)!;
                 return (
-                  <path
-                    key={`exp-${id}`}
-                    d={c.path}
-                    fill="none"
-                    stroke="var(--gold)"
-                    strokeWidth={3}
-                    strokeLinejoin="round"
-                    className="expansion-outline"
-                    opacity={0.95}
-                  />
+                  <path key={`exp-${id}`} d={c.path} fill="none" stroke="var(--gold)" strokeWidth={3}
+                    strokeLinejoin="round" className="expansion-outline" opacity={0.95} />
+                );
+              })}
+              {puppetIds.map((id) => {
+                const c = CANTONS.find((x) => x.id === id)!;
+                return (
+                  <path key={`pup-${id}`} d={c.path} fill="none" stroke={playerColor} strokeWidth={2.5}
+                    strokeDasharray="6 4" strokeLinejoin="round" opacity={0.9} />
                 );
               })}
             </g>

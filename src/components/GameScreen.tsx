@@ -4,10 +4,15 @@ import { StatsPanel } from "./StatsPanel";
 import { GeneralPanel } from "./GeneralPanel";
 import { NewsModal } from "./NewsModal";
 import { ElectionModal } from "./ElectionModal";
-import { useEffect } from "react";
+import { ConquestModal } from "./ConquestModal";
+import { InGameMenu } from "./InGameMenu";
+import { useMusic } from "@/hooks/useMusic";
+import { useEffect, useState } from "react";
 
 export function GameScreen() {
-  const { turn, cantons, endTurn, resetGame, setup, news } = useGame();
+  const { turn, cantons, endTurn, setup, news } = useGame();
+  const [menuOpen, setMenuOpen] = useState(false);
+  useMusic();
 
   // Apply theme
   useEffect(() => {
@@ -15,6 +20,7 @@ export function GameScreen() {
   }, [setup.theme]);
 
   const playerCantons = Object.values(cantons).filter((c) => c.owner === "player");
+  const puppetCantons = Object.values(cantons).filter((c) => c.owner === "puppet-of-player");
   const totalTreasury = playerCantons.reduce((s, c) => s + c.treasury, 0);
   const totalMilitary = playerCantons.reduce((s, c) => s + c.military, 0);
 
@@ -36,12 +42,11 @@ export function GameScreen() {
             ⏭ End Turn
           </button>
           <button
-            onClick={() => {
-              if (confirm("Return to main menu? Progress lost.")) resetGame();
-            }}
+            onClick={() => setMenuOpen(true)}
             className="btn-military text-xs px-3 py-2 rounded"
+            title="Menu / Save / Load / Settings"
           >
-            ⏏
+            ☰
           </button>
         </div>
       </header>
@@ -92,6 +97,8 @@ export function GameScreen() {
 
       <NewsModal />
       <ElectionModal />
+      <ConquestModal />
+      <InGameMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
     </div>
   );
 }
