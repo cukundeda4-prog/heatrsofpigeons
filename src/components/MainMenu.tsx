@@ -97,14 +97,14 @@ export function MainMenu() {
           <button onClick={() => setScreen("setup")} className="btn-military py-4 rounded-md text-base">
             ▶ Play (Single Player)
           </button>
+          <button onClick={() => setShowLoad(true)} className="btn-military py-3 rounded-md text-sm">
+            📂 Load Game {saves.length > 0 && <span className="text-gold/70">({saves.length})</span>}
+          </button>
           <button disabled className="btn-military py-4 rounded-md text-base">
             Multiplayer — Coming Soon
           </button>
-          <button
-            onClick={() => alert("Settings panel — adjust theme & ideology in-game from the top bar.")}
-            className="btn-military py-3 rounded-md text-sm"
-          >
-            Settings
+          <button onClick={() => setShowSettings(true)} className="btn-military py-3 rounded-md text-sm">
+            ⚙ Settings
           </button>
           <button
             onClick={() => {
@@ -115,6 +115,61 @@ export function MainMenu() {
             Exit
           </button>
         </motion.div>
+
+        {showLoad && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/85 backdrop-blur-sm p-4" onClick={() => setShowLoad(false)}>
+            <div onClick={(e) => e.stopPropagation()} className="panel rounded-xl p-5 max-w-md w-full space-y-3 max-h-[85vh] overflow-y-auto scrollbar-thin">
+              <div className="flex justify-between items-center">
+                <h2 className="font-display text-2xl text-gold">📂 Load Game</h2>
+                <button onClick={() => setShowLoad(false)} className="text-muted-foreground">✕</button>
+              </div>
+              {saves.length === 0 && <p className="text-xs text-muted-foreground">No saved campaigns yet.</p>}
+              {saves.map((s) => (
+                <div key={s.slot} className="panel rounded p-2 flex items-center gap-2 text-xs">
+                  <div className="flex-1">
+                    <div className="text-foreground font-display">SLOT {s.slot} — {s.name}</div>
+                    <div className="text-muted-foreground text-[10px]">Turn {s.turn} · {s.cantons} cantons · {new Date(s.savedAt).toLocaleString()}</div>
+                  </div>
+                  <button onClick={() => { loadGame(s.slot); setShowLoad(false); }} className="btn-military text-[10px] px-2 py-1 rounded">Load</button>
+                  <button onClick={() => { if (confirm(`Delete save slot ${s.slot}?`)) { deleteSave(s.slot); setShowLoad(false); } }} className="text-destructive">🗑</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {showSettings && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/85 backdrop-blur-sm p-4" onClick={() => setShowSettings(false)}>
+            <div onClick={(e) => e.stopPropagation()} className="panel rounded-xl p-5 max-w-md w-full space-y-3">
+              <div className="flex justify-between items-center">
+                <h2 className="font-display text-2xl text-gold">⚙ Settings</h2>
+                <button onClick={() => setShowSettings(false)} className="text-muted-foreground">✕</button>
+              </div>
+              <div className="panel rounded p-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-foreground">🎵 Background Music</span>
+                  <button
+                    onClick={() => setSetup({ musicEnabled: !setup.musicEnabled })}
+                    className={`px-3 py-1 rounded-full border text-[11px] ${setup.musicEnabled ? "border-gold bg-gold/10 text-gold" : "border-border text-muted-foreground"}`}
+                  >
+                    {setup.musicEnabled ? "ON" : "OFF"}
+                  </button>
+                </div>
+                <div>
+                  <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                    <span>Volume</span>
+                    <span>{Math.round(setup.musicVolume * 100)}%</span>
+                  </div>
+                  <input
+                    type="range" min={0} max={1} step={0.05} value={setup.musicVolume}
+                    onChange={(e) => setSetup({ musicVolume: Number(e.target.value) })}
+                    className="w-full accent-[var(--gold)]"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mt-12 flex items-center gap-3 text-xs text-muted-foreground">
           <img src={recruitImg} alt="" className="h-10 w-10 rounded-full object-cover border border-gold/40" />
