@@ -88,23 +88,12 @@ export function StatsPanel() {
 
           {s.opstinas.length > 0 && (
             <>
-              <div className="text-[10px] tracking-widest text-gold/70 pt-1">OPĆINE — DEPLOY ARMY</div>
-              <div className="space-y-1.5">
-                {s.opstinas.map((o, i) => (
-                  <div key={o.name} className="panel rounded p-1.5">
-                    <div className="flex justify-between text-[11px] mb-1">
-                      <span className="text-foreground">⚲ {o.name}</span>
-                      <span className="font-mono text-gold">{o.military.toLocaleString()}</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={Math.max(1000, s.military + o.military)}
-                      step={50}
-                      value={o.military}
-                      onChange={(e) => setOpstinaMilitary(s.id, i, Number(e.target.value))}
-                      className="w-full accent-[var(--gold)]"
-                    />
+              <div className="text-[10px] tracking-widest text-gold/70 pt-1">OPĆINE — GARRISON</div>
+              <div className="space-y-1">
+                {s.opstinas.map((o) => (
+                  <div key={o.name} className="flex justify-between text-[11px] panel rounded px-2 py-1">
+                    <span className="text-foreground">⚲ {o.name}</span>
+                    <span className="font-mono text-gold">{o.military.toLocaleString()}</span>
                   </div>
                 ))}
               </div>
