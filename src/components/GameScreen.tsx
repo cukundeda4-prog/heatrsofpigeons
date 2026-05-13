@@ -4,10 +4,15 @@ import { StatsPanel } from "./StatsPanel";
 import { GeneralPanel } from "./GeneralPanel";
 import { NewsModal } from "./NewsModal";
 import { ElectionModal } from "./ElectionModal";
-import { useEffect } from "react";
+import { ConquestModal } from "./ConquestModal";
+import { InGameMenu } from "./InGameMenu";
+import { useMusic } from "@/hooks/useMusic";
+import { useEffect, useState } from "react";
 
 export function GameScreen() {
-  const { turn, cantons, endTurn, resetGame, setup, news } = useGame();
+  const { turn, cantons, endTurn, setup, news } = useGame();
+  const [menuOpen, setMenuOpen] = useState(false);
+  useMusic();
 
   // Apply theme
   useEffect(() => {
