@@ -1,11 +1,17 @@
 import { motion } from "framer-motion";
 import { useGame } from "@/game/store";
+import { useMusic } from "@/hooks/useMusic";
+import { useState } from "react";
 import recruitImg from "@/assets/recruit.png";
 import generalImg from "@/assets/general.png";
 import ogImg from "@/assets/og-pigeon.png";
 
 export function MainMenu() {
-  const setScreen = useGame((s) => s.setScreen);
+  const { setScreen, listSaves, loadGame, deleteSave, setup, setSetup } = useGame();
+  const [showLoad, setShowLoad] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  useMusic();
+  const saves = listSaves();
 
   return (
     <div className="relative min-h-screen overflow-hidden grain">
