@@ -19,10 +19,21 @@ export function ElectionModal() {
             initial={{ scale: 0.9, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             className="panel rounded-xl p-6 max-w-md w-full text-center space-y-4"
+            style={gameOver.won ? { boxShadow: "0 0 60px color-mix(in oklab, var(--gold) 50%, transparent)" } : undefined}
           >
-            <div className="text-[10px] tracking-[0.4em] text-destructive">⚑ DEFEAT ⚑</div>
-            <h2 className="font-display text-4xl text-gold">Game Over</h2>
-            <img src={presidentImg} alt="" className="h-32 w-32 mx-auto rounded-full grayscale border-2 border-destructive object-cover" />
+            <div className={`text-[10px] tracking-[0.4em] ${gameOver.won ? "text-gold" : "text-destructive"}`}>
+              {gameOver.won ? "🏆 TOTAL VICTORY 🏆" : "⚑ DEFEAT ⚑"}
+            </div>
+            <h2 className="font-display text-4xl text-gold">
+              {gameOver.won ? "All Bosnia Bows" : "Game Over"}
+            </h2>
+            <img
+              src={presidentImg}
+              alt=""
+              className={`h-32 w-32 mx-auto rounded-full object-cover border-2 ${
+                gameOver.won ? "border-gold" : "border-destructive grayscale"
+              }`}
+            />
             <p className="text-sm text-muted-foreground">{gameOver.reason}</p>
             <button onClick={resetGame} className="btn-military py-3 px-8 rounded-md">
               Return to Menu
