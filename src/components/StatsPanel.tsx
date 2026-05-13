@@ -4,7 +4,7 @@ import presidentImg from "@/assets/president.jpg";
 import { pigeonName } from "./CantonMap";
 
 export function StatsPanel() {
-  const { selectedCanton, cantons, recruit, buyTanks, buyPlanes, buyArtillery, buyNuke, buyMedicine, buyFood, setOpstinaMilitary } = useGame();
+  const { selectedCanton, cantons, recruit, buyTanks, buyPlanes, buyArtillery, buyNuke, buyMedicine, buyFood } = useGame();
   if (!selectedCanton) {
     return (
       <aside className="panel rounded-lg p-4 text-sm text-muted-foreground">
