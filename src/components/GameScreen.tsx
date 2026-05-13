@@ -96,6 +96,8 @@ export function GameScreen() {
 
       <NewsModal />
       <ElectionModal />
+      <ConquestModal />
+      <InGameMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
     </div>
   );
 }
