@@ -586,7 +586,7 @@ export const useGame = create<GameStore>((set, get) => ({
       const p = JSON.parse(raw);
       // Backfill diplomacy fields on older saves
       const cantons = Object.fromEntries(
-        Object.entries(p.cantons as Record<string, CantonState>).map(([k, c]) => [k, { relations: 0, treaty: null, treatyTurnsLeft: 0, ...c }])
+        Object.entries(p.cantons as Record<string, Partial<CantonState> & { id: CantonId }>).map(([k, c]) => [k, { relations: 0, treaty: null, treatyTurnsLeft: 0, ...c } as CantonState])
       ) as Record<CantonId, CantonState>;
       set({ screen: "game", turn: p.turn, cantons, setup: p.setup, news: p.news ?? [], unreadNews: [], gameOver: p.gameOver ?? null, lastElection: p.lastElection ?? null, selectedCanton: p.selectedCanton ?? null, pendingConquest: null });
     } catch (e) { console.error("load failed", e); }
