@@ -3,8 +3,9 @@ import { CANTONS, PRESIDENTS } from "@/game/data";
 import presidentImg from "@/assets/president.jpg";
 import { pigeonName } from "./CantonMap";
 
-export function StatsPanel() {
-  const { selectedCanton, cantons, recruit, buyTanks, buyPlanes, buyArtillery, buyNuke, buyMedicine, buyFood } = useGame();
+export function StatsPanel({ onClose }: { onClose?: () => void } = {}) {
+  const { selectedCanton, cantons, recruit, buyTanks, buyPlanes, buyArtillery, buyNuke, buyMedicine, buyFood,
+    sendGift, proposePeace, proposeAlliance, declareWar } = useGame();
   if (!selectedCanton) {
     return (
       <aside className="panel rounded-lg p-4 text-sm text-muted-foreground">
@@ -15,6 +16,7 @@ export function StatsPanel() {
   const def = CANTONS.find((c) => c.id === selectedCanton)!;
   const s = cantons[selectedCanton];
   const isPlayer = s.owner === "player";
+  const isAI = s.owner.startsWith("ai-");
 
   return (
     <aside className="panel rounded-lg p-4 space-y-3 text-sm overflow-y-auto scrollbar-thin">
@@ -24,11 +26,16 @@ export function StatsPanel() {
           <h3 className="font-display text-xl text-foreground leading-tight">{def.name}</h3>
           <div className="text-xs text-muted-foreground">⚲ {def.capital}</div>
         </div>
-        <div
-          className="h-6 w-6 rounded-sm border border-gold/60"
-          style={{ background: def.color }}
-          title="Faction colour"
-        />
+        <div className="flex items-center gap-2">
+          <div
+            className="h-6 w-6 rounded-sm border border-gold/60"
+            style={{ background: def.color }}
+            title="Faction colour"
+          />
+          {onClose && (
+            <button onClick={onClose} className="md:hidden text-muted-foreground hover:text-foreground text-lg leading-none px-1" aria-label="Close">✕</button>
+          )}
+        </div>
       </header>
 
       <div className="flex items-center gap-3 panel rounded-md p-2">
@@ -99,6 +106,38 @@ export function StatsPanel() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {isAI && (
+        <div className="pt-2 border-t border-border space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] tracking-widest text-gold/70">DIPLOMACY</div>
+            <div className="text-[10px]">
+              <span className="text-muted-foreground mr-1">Relations</span>
+              <span className={s.relations >= 50 ? "text-gold" : s.relations <= -25 ? "text-destructive" : "text-foreground"}>
+                {s.relations > 0 ? "+" : ""}{s.relations}
+              </span>
+            </div>
+          </div>
+          <Bar label="Standing" value={(s.relations + 100) / 2} tone={s.relations <= -25 ? "red" : undefined} />
+          {s.treaty && (
+            <div className="text-[10px] panel rounded px-2 py-1 flex justify-between">
+              <span className="text-gold">
+                {s.treaty === "alliance" ? "🤝 ALLIED" : `🕊 PEACE`}
+              </span>
+              <span className="text-muted-foreground">
+                {s.treaty === "alliance" ? "perpetual" : `${s.treatyTurnsLeft ?? 0}t left`}
+              </span>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-1.5">
+            <ActionBtn onClick={() => sendGift(s.id, 3000)}>🎁 Gift 3k¢</ActionBtn>
+            <ActionBtn onClick={() => sendGift(s.id, 10000)}>🎁 Gift 10k¢</ActionBtn>
+            <ActionBtn onClick={() => proposePeace(s.id)}>🕊 Propose Peace</ActionBtn>
+            <ActionBtn onClick={() => proposeAlliance(s.id)}>🤝 Alliance (≥50)</ActionBtn>
+            <ActionBtn onClick={() => declareWar(s.id)}>⚔ Declare War</ActionBtn>
+          </div>
         </div>
       )}
     </aside>

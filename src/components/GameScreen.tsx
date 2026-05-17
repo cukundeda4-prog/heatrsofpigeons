@@ -10,9 +10,15 @@ import { useMusic } from "@/hooks/useMusic";
 import { useEffect, useState } from "react";
 
 export function GameScreen() {
-  const { turn, cantons, endTurn, setup, news } = useGame();
+  const { turn, cantons, endTurn, setup, news, selectedCanton, selectCanton } = useGame();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileSheet, setMobileSheet] = useState(false);
   useMusic();
+
+  // Auto-open mobile sheet when a canton is selected
+  useEffect(() => {
+    if (selectedCanton) setMobileSheet(true);
+  }, [selectedCanton]);
 
   // Apply theme
   useEffect(() => {
@@ -85,9 +91,19 @@ export function GameScreen() {
         </div>
 
         {/* Mobile bottom sheet stats */}
-        <div className="md:hidden absolute top-2 left-2 right-2 max-h-[40vh] overflow-y-auto scrollbar-thin pointer-events-auto z-20">
-          <StatsPanel />
-        </div>
+        {selectedCanton && mobileSheet && (
+          <div className="md:hidden fixed inset-x-0 bottom-0 z-30 max-h-[65vh] overflow-y-auto scrollbar-thin p-2 pb-24 pointer-events-auto animate-in slide-in-from-bottom duration-300">
+            <StatsPanel onClose={() => { setMobileSheet(false); selectCanton(null); }} />
+          </div>
+        )}
+        {selectedCanton && !mobileSheet && (
+          <button
+            onClick={() => setMobileSheet(true)}
+            className="md:hidden fixed bottom-24 right-3 z-30 btn-military text-[11px] px-3 py-2 rounded-full shadow-lg"
+          >
+            ▲ Canton Info
+          </button>
+        )}
       </main>
 
       {/* Bottom general bar */}

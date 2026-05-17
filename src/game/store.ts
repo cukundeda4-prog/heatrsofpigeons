@@ -6,6 +6,8 @@ export interface Opstina {
   military: number;
 }
 
+export type TreatyKind = "peace" | "alliance";
+
 export interface CantonState {
   id: CantonId;
   owner: string; // "player" | "ai-<id>" | "puppet-of-player"
@@ -25,7 +27,11 @@ export interface CantonState {
   nukes: number;
   general?: string;
   opstinas: Opstina[];
-  puppet?: boolean; // tribute-paying state
+  puppet?: boolean;
+  // Diplomacy (only meaningful for AI-owned cantons; player's own & puppets ignored)
+  relations: number;          // -100..100 with the player
+  treaty?: TreatyKind | null; // active treaty with the player
+  treatyTurnsLeft?: number;   // peace expires after N turns; alliance is persistent
 }
 
 export interface NewsItem {
@@ -100,6 +106,12 @@ interface GameStore {
 
   attack: (from: CantonId, to: CantonId) => void;
 
+  // Diplomacy
+  sendGift: (id: CantonId, amount: number) => boolean;
+  proposePeace: (id: CantonId) => boolean;
+  proposeAlliance: (id: CantonId) => boolean;
+  declareWar: (id: CantonId) => void;
+
   endTurn: () => void;
   startGame: () => void;
   resetGame: () => void;
@@ -113,6 +125,7 @@ interface GameStore {
 const PIGEON_IDS = PIGEON_TYPES.map((p) => p.id);
 const rand = (min: number, max: number) => Math.floor(min + Math.random() * (max - min + 1));
 const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 function buildInitialCantons(setup: PlayerSetup): Record<CantonId, CantonState> {
   const result = {} as Record<CantonId, CantonState>;
@@ -139,6 +152,9 @@ function buildInitialCantons(setup: PlayerSetup): Record<CantonId, CantonState> 
       artillery: isPlayer ? 0 : Math.random() < mult.aiAggression ? rand(0, 3) : 0,
       nukes: 0,
       opstinas: (OPSTINAS[c.id] ?? []).map((name) => ({ name, military: 0 })),
+      relations: isPlayer ? 100 : rand(-10, 30),
+      treaty: null,
+      treatyTurnsLeft: 0,
     };
     const op = result[c.id].opstinas;
     if (op.length) {
@@ -179,6 +195,20 @@ function distributeMil(c: CantonState, total: number): CantonState {
   return { ...c, military: newMil, opstinas: c.opstinas.map((o) => ({ ...o, military: per })) };
 }
 
+// Allies of the player contribute a defense boost when their neighbor is attacked
+function alliedDefenseBoost(target: CantonState, all: Record<CantonId, CantonState>): number {
+  const neighbors = NEIGHBORS[target.id] ?? [];
+  let boost = 0;
+  for (const nid of neighbors) {
+    const n = all[nid];
+    if (!n) continue;
+    if (isPlayerSide(target.owner) && n.owner.startsWith("ai-") && n.treaty === "alliance") {
+      boost += powerOf(n) * 0.25;
+    }
+  }
+  return boost;
+}
+
 export const useGame = create<GameStore>((set, get) => ({
   screen: "menu",
   setScreen: (s) => set({ screen: s }),
@@ -211,14 +241,13 @@ export const useGame = create<GameStore>((set, get) => ({
       pigeonType: st.setup.pigeonType,
       ideology: st.setup.ideology,
       religion: st.setup.religion,
+      treaty: null,
+      treatyTurnsLeft: 0,
+      relations: 100,
     };
-    set({
-      cantons: { ...st.cantons, [to]: updated },
-      pendingConquest: null,
-    });
+    set({ cantons: { ...st.cantons, [to]: updated }, pendingConquest: null });
     get().pushNews("⚑ Annexed", `${CANTONS.find((x) => x.id === to)!.name} has been annexed into your realm.`);
-    const all = Object.values(get().cantons);
-    if (all.every((c) => isPlayerSide(c.owner))) {
+    if (Object.values(get().cantons).every((c) => isPlayerSide(c.owner))) {
       set({ gameOver: { won: true, reason: "All of Bosnia flies your banner. Total dominion achieved." } });
     }
   },
@@ -227,19 +256,10 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!st.pendingConquest) return;
     const { to } = st.pendingConquest;
     const d = st.cantons[to];
-    const updated: CantonState = {
-      ...d,
-      owner: "puppet-of-player",
-      puppet: true,
-      loyalty: 50,
-    };
-    set({
-      cantons: { ...st.cantons, [to]: updated },
-      pendingConquest: null,
-    });
+    const updated: CantonState = { ...d, owner: "puppet-of-player", puppet: true, loyalty: 50, treaty: null, treatyTurnsLeft: 0 };
+    set({ cantons: { ...st.cantons, [to]: updated }, pendingConquest: null });
     get().pushNews("🎀 Puppet State", `${CANTONS.find((x) => x.id === to)!.name} bows as a puppet — tribute begins next turn.`);
-    const all = Object.values(get().cantons);
-    if (all.every((c) => isPlayerSide(c.owner))) {
+    if (Object.values(get().cantons).every((c) => isPlayerSide(c.owner))) {
       set({ gameOver: { won: true, reason: "All of Bosnia flies your banner — direct or vassalized. Total dominion achieved." } });
     }
   },
@@ -248,13 +268,8 @@ export const useGame = create<GameStore>((set, get) => ({
   unreadNews: [],
   pushNews: (title, body) =>
     set((st) => {
-      const item: NewsItem = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        turn: st.turn,
-        title,
-        body,
-      };
-      return { news: [item, ...st.news].slice(0, 50), unreadNews: [item, ...st.unreadNews] };
+      const item: NewsItem = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, turn: st.turn, title, body };
+      return { news: [item, ...st.news].slice(0, 80), unreadNews: [item, ...st.unreadNews] };
     }),
   dismissNews: (id) => set((st) => ({ unreadNews: st.unreadNews.filter((n) => n.id !== id) })),
   clearUnread: () => set({ unreadNews: [] }),
@@ -262,81 +277,131 @@ export const useGame = create<GameStore>((set, get) => ({
   mapMode: "3d",
   toggleMapMode: () => set((st) => ({ mapMode: st.mapMode === "3d" ? "2d" : "3d" })),
 
-  recruit: (cantonId, amount) =>
-    set((st) => {
-      const c = st.cantons[cantonId];
-      const cost = (amount / 500) * 5000;
-      if (c.treasury < cost) return st;
-      return { cantons: { ...st.cantons, [cantonId]: { ...c, treasury: c.treasury - cost, military: c.military + amount, units: c.units + amount } } };
-    }),
-  buyTanks: (cantonId, count) =>
-    set((st) => {
-      const c = st.cantons[cantonId];
-      const cost = count * 4000;
-      if (c.treasury < cost) return st;
-      return { cantons: { ...st.cantons, [cantonId]: { ...c, treasury: c.treasury - cost, tanks: c.tanks + count } } };
-    }),
-  buyPlanes: (cantonId, count) =>
-    set((st) => {
-      const c = st.cantons[cantonId];
-      const cost = count * 8000;
-      if (c.treasury < cost) return st;
-      return { cantons: { ...st.cantons, [cantonId]: { ...c, treasury: c.treasury - cost, planes: c.planes + count } } };
-    }),
-  buyArtillery: (cantonId, count) =>
-    set((st) => {
-      const c = st.cantons[cantonId];
-      const cost = count * 3000;
-      if (c.treasury < cost) return st;
-      return { cantons: { ...st.cantons, [cantonId]: { ...c, treasury: c.treasury - cost, artillery: c.artillery + count } } };
-    }),
-  buyNuke: (cantonId) =>
-    set((st) => {
-      const c = st.cantons[cantonId];
-      const cost = 50000;
-      if (c.treasury < cost) return st;
-      return { cantons: { ...st.cantons, [cantonId]: { ...c, treasury: c.treasury - cost, nukes: c.nukes + 1 } } };
-    }),
-  buyMedicine: (cantonId) =>
-    set((st) => {
-      const c = st.cantons[cantonId];
-      const cost = 3000;
-      if (c.treasury < cost) return st;
-      return { cantons: { ...st.cantons, [cantonId]: { ...c, treasury: c.treasury - cost, health: Math.min(100, c.health + 15) } } };
-    }),
-  buyFood: (cantonId) =>
-    set((st) => {
-      const c = st.cantons[cantonId];
-      const cost = 2500;
-      if (c.treasury < cost) return st;
-      return { cantons: { ...st.cantons, [cantonId]: { ...c, treasury: c.treasury - cost, hunger: Math.min(100, c.hunger + 20), loyalty: Math.min(100, c.loyalty + 3) } } };
-    }),
+  recruit: (cantonId, amount) => set((st) => {
+    const c = st.cantons[cantonId];
+    const cost = (amount / 500) * 5000;
+    if (c.treasury < cost) return st;
+    return { cantons: { ...st.cantons, [cantonId]: { ...c, treasury: c.treasury - cost, military: c.military + amount, units: c.units + amount } } };
+  }),
+  buyTanks: (cantonId, count) => set((st) => {
+    const c = st.cantons[cantonId]; const cost = count * 4000;
+    if (c.treasury < cost) return st;
+    return { cantons: { ...st.cantons, [cantonId]: { ...c, treasury: c.treasury - cost, tanks: c.tanks + count } } };
+  }),
+  buyPlanes: (cantonId, count) => set((st) => {
+    const c = st.cantons[cantonId]; const cost = count * 8000;
+    if (c.treasury < cost) return st;
+    return { cantons: { ...st.cantons, [cantonId]: { ...c, treasury: c.treasury - cost, planes: c.planes + count } } };
+  }),
+  buyArtillery: (cantonId, count) => set((st) => {
+    const c = st.cantons[cantonId]; const cost = count * 3000;
+    if (c.treasury < cost) return st;
+    return { cantons: { ...st.cantons, [cantonId]: { ...c, treasury: c.treasury - cost, artillery: c.artillery + count } } };
+  }),
+  buyNuke: (cantonId) => set((st) => {
+    const c = st.cantons[cantonId]; const cost = 50000;
+    if (c.treasury < cost) return st;
+    return { cantons: { ...st.cantons, [cantonId]: { ...c, treasury: c.treasury - cost, nukes: c.nukes + 1 } } };
+  }),
+  buyMedicine: (cantonId) => set((st) => {
+    const c = st.cantons[cantonId]; const cost = 3000;
+    if (c.treasury < cost) return st;
+    return { cantons: { ...st.cantons, [cantonId]: { ...c, treasury: c.treasury - cost, health: Math.min(100, c.health + 15) } } };
+  }),
+  buyFood: (cantonId) => set((st) => {
+    const c = st.cantons[cantonId]; const cost = 2500;
+    if (c.treasury < cost) return st;
+    return { cantons: { ...st.cantons, [cantonId]: { ...c, treasury: c.treasury - cost, hunger: Math.min(100, c.hunger + 20), loyalty: Math.min(100, c.loyalty + 3) } } };
+  }),
   assignGeneral: (cantonId, name) =>
     set((st) => ({ cantons: { ...st.cantons, [cantonId]: { ...st.cantons[cantonId], general: name } } })),
 
   attack: (from, to) => {
     const st = get();
-    const a = st.cantons[from];
-    const d = st.cantons[to];
+    const a = st.cantons[from]; const d = st.cantons[to];
     if (a.owner !== "player" || isPlayerSide(d.owner)) return;
+    // Attacking breaks treaty
+    const wasTreaty = d.treaty;
     const aPower = powerOf(a);
-    const dPower = powerOf(d);
+    const dPower = powerOf(d) + alliedDefenseBoost(d, st.cantons);
+    const ratio = aPower / Math.max(1, dPower);
     const win = aPower * (0.8 + Math.random() * 0.4) > dPower;
+    const targetName = CANTONS.find((x) => x.id === to)!.name;
+
+    const aLoss = Math.floor(a.military * (win ? clamp(0.18 + (1 / Math.max(0.5, ratio)) * 0.1, 0.15, 0.45) : clamp(0.35 + (1 / Math.max(0.5, ratio)) * 0.15, 0.4, 0.7)));
+    const dLoss = Math.floor(d.military * (win ? clamp(0.5 + Math.random() * 0.3, 0.45, 0.85) : clamp(0.15 + Math.random() * 0.2, 0.1, 0.4)));
+
+    const nextCantons = { ...st.cantons };
+    nextCantons[from] = distributeMil(a, a.military - aLoss);
+    nextCantons[to] = { ...distributeMil(d, d.military - dLoss), relations: clamp(d.relations - 25, -100, 100), treaty: null, treatyTurnsLeft: 0 };
+
     if (win) {
-      set({
-        cantons: {
-          ...st.cantons,
-          [from]: distributeMil(a, Math.floor(a.military * 0.7)),
-        },
-        pendingConquest: { from, to },
-      });
-      get().pushNews("Victory!", `⚔️ Glorious victory at ${CANTONS.find((x) => x.id === to)!.name}! Choose its fate.`);
+      set({ cantons: nextCantons, pendingConquest: { from, to } });
+      get().pushNews("⚔ Victory!", `Stormed ${targetName}. Casualties — you: ${aLoss.toLocaleString()}, enemy: ${dLoss.toLocaleString()}. Choose its fate.`);
     } else {
-      set({
-        cantons: { ...st.cantons, [from]: distributeMil(a, Math.floor(a.military * 0.5)) },
-      });
-      get().pushNews("Defeat", NEWS_TEMPLATES.warLost(d.id));
+      set({ cantons: nextCantons });
+      get().pushNews("💀 Defeat", `Repelled at ${targetName}. Casualties — you: ${aLoss.toLocaleString()}, enemy: ${dLoss.toLocaleString()}.`);
     }
+    if (wasTreaty) get().pushNews("🗞 Treaty Broken", `Your assault has shattered the ${wasTreaty} with ${targetName}.`);
+  },
+
+  // ---------- Diplomacy ----------
+  sendGift: (id, amount) => {
+    const st = get();
+    const playerCantons = Object.values(st.cantons).filter((c) => c.owner === "player");
+    const cap = playerCantons.sort((a, b) => b.treasury - a.treasury)[0];
+    if (!cap || cap.treasury < amount) return false;
+    const t = st.cantons[id];
+    if (!t.owner.startsWith("ai-")) return false;
+    const relGain = Math.min(30, Math.round(amount / 600));
+    set({
+      cantons: {
+        ...st.cantons,
+        [cap.id]: { ...cap, treasury: cap.treasury - amount },
+        [id]: { ...t, relations: clamp(t.relations + relGain, -100, 100), treasury: t.treasury + Math.floor(amount * 0.7) },
+      },
+    });
+    get().pushNews("🎁 Gift Sent", `Sent ${amount.toLocaleString()}¢ to ${CANTONS.find((x) => x.id === id)!.name}. Relations +${relGain}.`);
+    return true;
+  },
+  proposePeace: (id) => {
+    const st = get();
+    const t = st.cantons[id];
+    if (!t.owner.startsWith("ai-")) return false;
+    const chance = clamp(0.3 + t.relations / 100, 0.05, 0.95);
+    if (Math.random() < chance) {
+      set({ cantons: { ...st.cantons, [id]: { ...t, treaty: "peace", treatyTurnsLeft: 12, relations: clamp(t.relations + 10, -100, 100) } } });
+      get().pushNews("🕊 Peace Treaty", `${CANTONS.find((x) => x.id === id)!.name} signed a 12-turn peace.`);
+      return true;
+    }
+    set({ cantons: { ...st.cantons, [id]: { ...t, relations: clamp(t.relations - 5, -100, 100) } } });
+    get().pushNews("✋ Peace Rejected", `${CANTONS.find((x) => x.id === id)!.name} laughed at your peace overture.`);
+    return false;
+  },
+  proposeAlliance: (id) => {
+    const st = get();
+    const t = st.cantons[id];
+    if (!t.owner.startsWith("ai-")) return false;
+    if (t.relations < 50) {
+      get().pushNews("🤝 Alliance Rejected", `${CANTONS.find((x) => x.id === id)!.name} demands relations of at least 50 (currently ${t.relations}).`);
+      return false;
+    }
+    const chance = clamp((t.relations - 40) / 60, 0.15, 0.95);
+    if (Math.random() < chance) {
+      set({ cantons: { ...st.cantons, [id]: { ...t, treaty: "alliance", treatyTurnsLeft: 999, relations: 100 } } });
+      get().pushNews("🤝 Alliance Forged", `${CANTONS.find((x) => x.id === id)!.name} stands with you. They will defend your borders.`);
+      return true;
+    }
+    set({ cantons: { ...st.cantons, [id]: { ...t, relations: clamp(t.relations - 10, -100, 100) } } });
+    get().pushNews("🤝 Alliance Rejected", `${CANTONS.find((x) => x.id === id)!.name} refused your alliance.`);
+    return false;
+  },
+  declareWar: (id) => {
+    const st = get();
+    const t = st.cantons[id];
+    if (!t.owner.startsWith("ai-")) return;
+    set({ cantons: { ...st.cantons, [id]: { ...t, treaty: null, treatyTurnsLeft: 0, relations: clamp(t.relations - 40, -100, 100) } } });
+    get().pushNews("⚔ War Declared", `You have declared war on ${CANTONS.find((x) => x.id === id)!.name}.`);
   },
 
   endTurn: () => {
@@ -353,19 +418,30 @@ export const useGame = create<GameStore>((set, get) => ({
       const ownerMult = c.owner === "player" ? mult.income : c.puppet ? 0.6 : 1;
       const income = Math.floor(incomeBase * (0.6 + economyMod) * ownerMult);
       const popDelta = c.loyalty > 65 ? rand(500, 2500) : c.loyalty < 35 ? -rand(500, 3000) : rand(-300, 800);
+      // Treaty countdown / natural relations drift
+      let treaty = c.treaty ?? null;
+      let treatyTurnsLeft = c.treatyTurnsLeft ?? 0;
+      if (treaty === "peace") {
+        treatyTurnsLeft -= 1;
+        if (treatyTurnsLeft <= 0) { treaty = null; newsBatch.push({ title: "🕊 Peace Expired", body: `Peace with ${CANTONS.find((x) => x.id === c.id)!.name} has lapsed.` }); }
+      }
+      const relDrift = treaty === "alliance" ? rand(0, 2) : treaty === "peace" ? rand(-1, 2) : rand(-3, 2);
       next[c.id] = {
         ...c,
         treasury: c.treasury + income,
         population: Math.max(1000, c.population + popDelta),
-        hunger: Math.max(0, Math.min(100, c.hunger + rand(-6, 4))),
-        health: Math.max(0, Math.min(100, c.health + rand(-3, 3))),
-        loyalty: Math.max(0, Math.min(100, c.loyalty + rand(-4, 4))),
+        hunger: clamp(c.hunger + rand(-6, 4), 0, 100),
+        health: clamp(c.health + rand(-3, 3), 0, 100),
+        loyalty: clamp(c.loyalty + rand(-4, 4), 0, 100),
+        relations: clamp(c.relations + relDrift, -100, 100),
+        treaty,
+        treatyTurnsLeft,
       };
     });
 
     // Puppet tribute → player capital
     const playerOwned = Object.values(next).filter((c) => c.owner === "player");
-    const capital = playerOwned[0];
+    const capital = playerOwned.sort((a, b) => b.treasury - a.treasury)[0];
     if (capital) {
       let totalTribute = 0;
       for (const c of Object.values(next)) {
@@ -387,38 +463,44 @@ export const useGame = create<GameStore>((set, get) => ({
       if (Math.random() > mult.aiAggression) continue;
       const neighbors = NEIGHBORS[att.id].map((nid) => next[nid]).filter((n) => n.owner !== att.owner);
       if (!neighbors.length) continue;
-      // Prefer player side targets when difficulty high, weak targets otherwise
       const wantPlayer = Math.random() < 0.4 + mult.aiAggression * 0.4;
-      const candidates = wantPlayer ? neighbors.filter((n) => isPlayerSide(n.owner)) : neighbors;
-      const target = (candidates.length ? candidates : neighbors).sort((a, b) => powerOf(a) - powerOf(b))[0];
+      // Treaties block player attacks (mostly)
+      const blockedByTreaty = (n: CantonState) =>
+        isPlayerSide(n.owner) && next[att.id].treaty && Math.random() > 0.05; // 5% chance to break
+      const filtered = neighbors.filter((n) => !blockedByTreaty(n));
+      if (!filtered.length) continue;
+      const candidates = wantPlayer ? filtered.filter((n) => isPlayerSide(n.owner)) : filtered;
+      const target = (candidates.length ? candidates : filtered).sort((a, b) => powerOf(a) - powerOf(b))[0];
       if (!target) continue;
+      // If treaty existed and AI attacks player anyway: break + news
+      if (isPlayerSide(target.owner) && next[att.id].treaty) {
+        const kind = next[att.id].treaty;
+        next[att.id] = { ...next[att.id], treaty: null, treatyTurnsLeft: 0, relations: clamp(next[att.id].relations - 30, -100, 100) };
+        newsBatch.push({ title: "🗞 Treaty Broken", body: `${CANTONS.find((x) => x.id === att.id)!.name} broke the ${kind} and marched on you!` });
+      }
       const aPow = powerOf(att) * mult.aiPower;
-      const dPow = powerOf(target);
+      const dPow = powerOf(target) + alliedDefenseBoost(target, next);
       const wins = aPow * (0.7 + Math.random() * 0.5) > dPow;
+      const aLoss = Math.floor(att.military * (wins ? 0.2 : 0.5));
+      const dLoss = Math.floor(target.military * (wins ? 0.6 : 0.25));
+      next[att.id] = distributeMil(next[att.id], next[att.id].military - aLoss);
       if (wins) {
         const targetName = CANTONS.find((x) => x.id === target.id)!.name;
         const attName = CANTONS.find((x) => x.id === att.id)!.name;
         if (isPlayerSide(target.owner)) {
-          // AI conquers player canton
-          next[target.id] = {
-            ...distributeMil(target, Math.floor(target.military * 0.4)),
-            owner: att.owner,
-            puppet: false,
-            loyalty: 30,
-          };
-          newsBatch.push({ title: "💀 Province Lost!", body: `${attName} has stormed and seized ${targetName}!` });
+          next[target.id] = { ...distributeMil(target, Math.floor(target.military * 0.4)), owner: att.owner, puppet: false, loyalty: 30, relations: -30, treaty: null, treatyTurnsLeft: 0 };
+          newsBatch.push({ title: "💀 Province Lost!", body: `${attName} stormed and seized ${targetName}! (your losses: ${dLoss.toLocaleString()})` });
         } else {
-          // AI absorbs other AI
-          next[target.id] = {
-            ...distributeMil(target, Math.floor(target.military * 0.4)),
-            owner: att.owner,
-            loyalty: 40,
-          };
+          next[target.id] = { ...distributeMil(target, Math.floor(target.military * 0.4)), owner: att.owner, loyalty: 40 };
           newsBatch.push({ title: "🗞 Border War", body: `${attName} conquered ${targetName}.` });
         }
-        next[att.id] = distributeMil(next[att.id], Math.floor(att.military * 0.75));
       } else {
-        next[att.id] = distributeMil(next[att.id], Math.floor(att.military * 0.6));
+        next[target.id] = distributeMil(target, target.military - dLoss);
+        if (isPlayerSide(target.owner)) {
+          const attName = CANTONS.find((x) => x.id === att.id)!.name;
+          const targetName = CANTONS.find((x) => x.id === target.id)!.name;
+          newsBatch.push({ title: "🛡 Repelled Attack", body: `${attName} attacked ${targetName} and was driven back. Casualties — yours: ${dLoss.toLocaleString()}, theirs: ${aLoss.toLocaleString()}.` });
+        }
       }
     }
 
@@ -434,10 +516,7 @@ export const useGame = create<GameStore>((set, get) => ({
       if (c.loyalty < 20 && Math.random() < 0.35 && c.owner !== "player") {
         const newType = pick(PIGEON_IDS.filter((p) => p !== c.pigeonType));
         next[c.id] = { ...c, pigeonType: newType, loyalty: 55 };
-        newsBatch.push({
-          title: "Great Migration",
-          body: NEWS_TEMPLATES.migration(CANTONS.find((x) => x.id === c.id)!.name, PIGEON_TYPES.find((p) => p.id === newType)!.name),
-        });
+        newsBatch.push({ title: "Great Migration", body: NEWS_TEMPLATES.migration(CANTONS.find((x) => x.id === c.id)!.name, PIGEON_TYPES.find((p) => p.id === newType)!.name) });
       }
     }
 
@@ -451,8 +530,7 @@ export const useGame = create<GameStore>((set, get) => ({
     newsBatch.forEach((n) => get().pushNews(n.title, n.body));
 
     // Victory check
-    const allCantons = Object.values(next);
-    if (allCantons.every((c) => isPlayerSide(c.owner))) {
+    if (Object.values(next).every((c) => isPlayerSide(c.owner))) {
       set({ gameOver: { won: true, reason: "All of Bosnia flies your banner. Total dominion achieved." } });
       return;
     }
@@ -474,106 +552,56 @@ export const useGame = create<GameStore>((set, get) => ({
         get().pushNews("🗳 RE-ELECTED!", `Year ${Math.floor(nextTurn / 12)} — you won ${approval}% vs ${opponent}%.`);
       } else {
         get().pushNews("🗳 ELECTION LOST", `Approval ${approval}% vs opponent ${opponent}%.`);
-        set({
-          gameOver: {
-            won: false,
-            reason: `You lost the year-${Math.floor(nextTurn / 12)} elections — ${approval}% vs ${opponent}%.`,
-            approval,
-          },
-        });
+        set({ gameOver: { won: false, reason: `You lost the year-${Math.floor(nextTurn / 12)} elections — ${approval}% vs ${opponent}%.`, approval } });
       }
     }
   },
 
-  startGame: () =>
-    set((st) => ({
-      screen: "game",
-      turn: 1,
-      cantons: buildInitialCantons(st.setup),
-      selectedCanton: st.setup.startingCanton,
-      news: [],
-      unreadNews: [],
-      gameOver: null,
-      lastElection: null,
-      pendingConquest: null,
-    })),
+  startGame: () => set((st) => ({
+    screen: "game", turn: 1, cantons: buildInitialCantons(st.setup), selectedCanton: st.setup.startingCanton,
+    news: [], unreadNews: [], gameOver: null, lastElection: null, pendingConquest: null,
+  })),
 
-  resetGame: () =>
-    set((st) => ({
-      screen: "menu",
-      turn: 1,
-      setup: { ...initialSetup, musicEnabled: st.setup.musicEnabled, musicVolume: st.setup.musicVolume },
-      cantons: buildInitialCantons(initialSetup),
-      selectedCanton: null,
-      news: [],
-      unreadNews: [],
-      gameOver: null,
-      lastElection: null,
-      pendingConquest: null,
-    })),
+  resetGame: () => set((st) => ({
+    screen: "menu", turn: 1,
+    setup: { ...initialSetup, musicEnabled: st.setup.musicEnabled, musicVolume: st.setup.musicVolume },
+    cantons: buildInitialCantons(initialSetup), selectedCanton: null,
+    news: [], unreadNews: [], gameOver: null, lastElection: null, pendingConquest: null,
+  })),
 
   saveGame: (slot) => {
     const st = get();
-    const payload = {
-      v: 1,
-      turn: st.turn,
-      cantons: st.cantons,
-      setup: st.setup,
-      news: st.news,
-      gameOver: st.gameOver,
-      lastElection: st.lastElection,
-      selectedCanton: st.selectedCanton,
-      savedAt: Date.now(),
-      name: st.setup.leaderName || `Save ${slot}`,
-    };
+    const payload = { v: 2, turn: st.turn, cantons: st.cantons, setup: st.setup, news: st.news, gameOver: st.gameOver, lastElection: st.lastElection, selectedCanton: st.selectedCanton, savedAt: Date.now(), name: st.setup.leaderName || `Save ${slot}` };
     try {
       localStorage.setItem(SAVE_PREFIX + slot, JSON.stringify(payload));
       const idx = JSON.parse(localStorage.getItem(SAVE_INDEX_KEY) || "[]");
-      if (!idx.includes(slot)) {
-        idx.push(slot);
-        localStorage.setItem(SAVE_INDEX_KEY, JSON.stringify(idx));
-      }
+      if (!idx.includes(slot)) { idx.push(slot); localStorage.setItem(SAVE_INDEX_KEY, JSON.stringify(idx)); }
       get().pushNews("💾 Saved", `Campaign saved to slot ${slot}.`);
-    } catch (e) {
-      console.error("save failed", e);
-    }
+    } catch (e) { console.error("save failed", e); }
   },
   loadGame: (slot) => {
     try {
       const raw = localStorage.getItem(SAVE_PREFIX + slot);
       if (!raw) return;
       const p = JSON.parse(raw);
-      set({
-        screen: "game",
-        turn: p.turn,
-        cantons: p.cantons,
-        setup: p.setup,
-        news: p.news ?? [],
-        unreadNews: [],
-        gameOver: p.gameOver ?? null,
-        lastElection: p.lastElection ?? null,
-        selectedCanton: p.selectedCanton ?? null,
-        pendingConquest: null,
-      });
-    } catch (e) {
-      console.error("load failed", e);
-    }
+      // Backfill diplomacy fields on older saves
+      const cantons = Object.fromEntries(
+        Object.entries(p.cantons as Record<string, Partial<CantonState> & { id: CantonId }>).map(([k, c]) => [k, { relations: 0, treaty: null, treatyTurnsLeft: 0, ...c } as CantonState])
+      ) as Record<CantonId, CantonState>;
+      set({ screen: "game", turn: p.turn, cantons, setup: p.setup, news: p.news ?? [], unreadNews: [], gameOver: p.gameOver ?? null, lastElection: p.lastElection ?? null, selectedCanton: p.selectedCanton ?? null, pendingConquest: null });
+    } catch (e) { console.error("load failed", e); }
   },
   listSaves: () => {
     try {
       const idx: number[] = JSON.parse(localStorage.getItem(SAVE_INDEX_KEY) || "[]");
-      return idx
-        .map((slot) => {
-          const raw = localStorage.getItem(SAVE_PREFIX + slot);
-          if (!raw) return null;
-          const p = JSON.parse(raw);
-          const owned = Object.values(p.cantons as Record<string, CantonState>).filter((c) => isPlayerSide(c.owner)).length;
-          return { slot, name: p.name || `Save ${slot}`, turn: p.turn, cantons: owned, savedAt: p.savedAt };
-        })
-        .filter(Boolean) as SaveSlot[];
-    } catch {
-      return [];
-    }
+      return idx.map((slot) => {
+        const raw = localStorage.getItem(SAVE_PREFIX + slot);
+        if (!raw) return null;
+        const p = JSON.parse(raw);
+        const owned = Object.values(p.cantons as Record<string, CantonState>).filter((c) => isPlayerSide(c.owner)).length;
+        return { slot, name: p.name || `Save ${slot}`, turn: p.turn, cantons: owned, savedAt: p.savedAt };
+      }).filter(Boolean) as SaveSlot[];
+    } catch { return []; }
   },
   deleteSave: (slot) => {
     try {
