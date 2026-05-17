@@ -26,11 +26,16 @@ export function StatsPanel({ onClose }: { onClose?: () => void } = {}) {
           <h3 className="font-display text-xl text-foreground leading-tight">{def.name}</h3>
           <div className="text-xs text-muted-foreground">⚲ {def.capital}</div>
         </div>
-        <div
-          className="h-6 w-6 rounded-sm border border-gold/60"
-          style={{ background: def.color }}
-          title="Faction colour"
-        />
+        <div className="flex items-center gap-2">
+          <div
+            className="h-6 w-6 rounded-sm border border-gold/60"
+            style={{ background: def.color }}
+            title="Faction colour"
+          />
+          {onClose && (
+            <button onClick={onClose} className="md:hidden text-muted-foreground hover:text-foreground text-lg leading-none px-1" aria-label="Close">✕</button>
+          )}
+        </div>
       </header>
 
       <div className="flex items-center gap-3 panel rounded-md p-2">
