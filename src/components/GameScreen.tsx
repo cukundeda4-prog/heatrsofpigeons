@@ -10,9 +10,15 @@ import { useMusic } from "@/hooks/useMusic";
 import { useEffect, useState } from "react";
 
 export function GameScreen() {
-  const { turn, cantons, endTurn, setup, news } = useGame();
+  const { turn, cantons, endTurn, setup, news, selectedCanton, selectCanton } = useGame();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileSheet, setMobileSheet] = useState(false);
   useMusic();
+
+  // Auto-open mobile sheet when a canton is selected
+  useEffect(() => {
+    if (selectedCanton) setMobileSheet(true);
+  }, [selectedCanton]);
 
   // Apply theme
   useEffect(() => {
