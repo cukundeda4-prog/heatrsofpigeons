@@ -3,8 +3,9 @@ import { CANTONS, PRESIDENTS } from "@/game/data";
 import presidentImg from "@/assets/president.jpg";
 import { pigeonName } from "./CantonMap";
 
-export function StatsPanel() {
-  const { selectedCanton, cantons, recruit, buyTanks, buyPlanes, buyArtillery, buyNuke, buyMedicine, buyFood } = useGame();
+export function StatsPanel({ onClose }: { onClose?: () => void } = {}) {
+  const { selectedCanton, cantons, recruit, buyTanks, buyPlanes, buyArtillery, buyNuke, buyMedicine, buyFood,
+    sendGift, proposePeace, proposeAlliance, declareWar } = useGame();
   if (!selectedCanton) {
     return (
       <aside className="panel rounded-lg p-4 text-sm text-muted-foreground">
@@ -15,6 +16,7 @@ export function StatsPanel() {
   const def = CANTONS.find((c) => c.id === selectedCanton)!;
   const s = cantons[selectedCanton];
   const isPlayer = s.owner === "player";
+  const isAI = s.owner.startsWith("ai-");
 
   return (
     <aside className="panel rounded-lg p-4 space-y-3 text-sm overflow-y-auto scrollbar-thin">
