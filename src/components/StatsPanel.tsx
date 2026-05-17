@@ -108,6 +108,38 @@ export function StatsPanel({ onClose }: { onClose?: () => void } = {}) {
           )}
         </div>
       )}
+
+      {isAI && (
+        <div className="pt-2 border-t border-border space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] tracking-widest text-gold/70">DIPLOMACY</div>
+            <div className="text-[10px]">
+              <span className="text-muted-foreground mr-1">Relations</span>
+              <span className={s.relations >= 50 ? "text-gold" : s.relations <= -25 ? "text-destructive" : "text-foreground"}>
+                {s.relations > 0 ? "+" : ""}{s.relations}
+              </span>
+            </div>
+          </div>
+          <Bar label="Standing" value={(s.relations + 100) / 2} tone={s.relations <= -25 ? "red" : undefined} />
+          {s.treaty && (
+            <div className="text-[10px] panel rounded px-2 py-1 flex justify-between">
+              <span className="text-gold">
+                {s.treaty === "alliance" ? "🤝 ALLIED" : `🕊 PEACE`}
+              </span>
+              <span className="text-muted-foreground">
+                {s.treaty === "alliance" ? "perpetual" : `${s.treatyTurnsLeft ?? 0}t left`}
+              </span>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-1.5">
+            <ActionBtn onClick={() => sendGift(s.id, 3000)}>🎁 Gift 3k¢</ActionBtn>
+            <ActionBtn onClick={() => sendGift(s.id, 10000)}>🎁 Gift 10k¢</ActionBtn>
+            <ActionBtn onClick={() => proposePeace(s.id)}>🕊 Propose Peace</ActionBtn>
+            <ActionBtn onClick={() => proposeAlliance(s.id)}>🤝 Alliance (≥50)</ActionBtn>
+            <ActionBtn onClick={() => declareWar(s.id)}>⚔ Declare War</ActionBtn>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
