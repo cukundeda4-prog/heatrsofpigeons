@@ -19,7 +19,7 @@ export function GeneralPanel() {
   const current = selectable ? cantons[selectedCanton!]?.general : null;
 
   return (
-    <div className="panel rounded-lg p-2 flex items-center gap-3 max-w-2xl mx-auto pointer-events-auto">
+    <div className="relative panel rounded-lg p-2 flex items-center gap-3 max-w-2xl mx-auto pointer-events-auto">
       <img
         src={generalImg}
         alt="General"
